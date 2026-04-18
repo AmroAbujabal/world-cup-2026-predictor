@@ -76,6 +76,7 @@ def compute_recent_form(df: pd.DataFrame, n: int = 5) -> pd.DataFrame:
     For each match, compute each team's average points per game over their
     last n matches (Win=3, Draw=1, Loss=0). Returns values in [0, 3].
     Teams with no prior history get 0.0.
+    df must be sorted by date (ascending).
     """
     team_history: dict[str, list[float]] = defaultdict(list)
     home_forms: list[float] = []

@@ -105,3 +105,79 @@ def compute_recent_form(df: pd.DataFrame, n: int = 5) -> pd.DataFrame:
     result['home_form'] = home_forms
     result['away_form'] = away_forms
     return result
+
+
+def compute_h2h(df: pd.DataFrame, n: int = 10) -> pd.DataFrame:
+    """
+    For each match, compute the H2H record between the two teams from
+    their last n encounters. Counts wins/draws/losses from the current
+    home team's perspective. df must be sorted by date (ascending).
+    """
+    # key: frozenset of (team1, team2) -> list of winner strings or 'draw'
+    h2h_records: dict[frozenset, list[str]] = defaultdict(list)
+    h2h_hw: list[int] = []
+    h2h_d: list[int] = []
+    h2h_aw: list[int] = []
+
+    for _, row in df.iterrows():
+        home_team = row['home_team']
+        away_team = row['away_team']
+        key = frozenset([home_team, away_team])
+
+        past = h2h_records[key][-n:]
+        home_wins = sum(1 for r in past if r == home_team)
+        draws = sum(1 for r in past if r == 'draw')
+        away_wins = sum(1 for r in past if r == away_team)
+
+        h2h_hw.append(home_wins)
+        h2h_d.append(draws)
+        h2h_aw.append(away_wins)
+
+        if row['home_score'] > row['away_score']:
+            h2h_records[key].append(home_team)
+        elif row['home_score'] < row['away_score']:
+            h2h_records[key].append(away_team)
+        else:
+            h2h_records[key].append('draw')
+
+    result = df.copy()
+    result['h2h_home_wins'] = h2h_hw
+    result['h2h_draws'] = h2h_d
+    result['h2h_away_wins'] = h2h_aw
+    return result
+
+
+FEATURE_COLS = [
+    'elo_diff', 'home_elo_before', 'away_elo_before',
+    'home_form', 'away_form',
+    'h2h_home_wins', 'h2h_draws', 'h2h_away_wins',
+    'is_neutral',
+]
+
+
+def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+    """
+    Apply all feature engineering steps and return (X, y).
+    X: DataFrame with FEATURE_COLS columns.
+    y: Series with values 0=home win, 1=draw, 2=away win.
+    """
+    df = compute_elo_ratings(df)
+    df = compute_recent_form(df)
+    df = compute_h2h(df)
+
+    df['elo_diff'] = df['home_elo_before'] - df['away_elo_before']
+    df['is_neutral'] = df['neutral'].astype(int)
+
+    X = df[FEATURE_COLS].copy()
+
+    conditions = [
+        df['home_score'] > df['away_score'],
+        df['home_score'] == df['away_score'],
+        df['home_score'] < df['away_score'],
+    ]
+    y = pd.Series(
+        np.select(conditions, [0, 1, 2]),
+        name='outcome',
+        dtype=int,
+    )
+    return X, y

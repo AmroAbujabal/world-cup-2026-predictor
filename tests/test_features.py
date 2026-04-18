@@ -94,3 +94,74 @@ def test_recent_form_does_not_mutate_input():
     original_cols = list(df.columns)
     compute_recent_form(df)
     assert list(df.columns) == original_cols
+
+
+from backend.model.features import compute_h2h
+
+
+def test_h2h_columns_added():
+    df = load_data("data/results.csv")
+    result = compute_h2h(df)
+    assert 'h2h_home_wins' in result.columns
+    assert 'h2h_draws' in result.columns
+    assert 'h2h_away_wins' in result.columns
+
+
+def test_h2h_first_encounter_is_zero():
+    df = load_data("data/results.csv")
+    result = compute_h2h(df)
+    assert result['h2h_home_wins'].iloc[0] == 0
+    assert result['h2h_draws'].iloc[0] == 0
+    assert result['h2h_away_wins'].iloc[0] == 0
+
+
+def test_h2h_counts_non_negative():
+    df = load_data("data/results.csv")
+    result = compute_h2h(df)
+    assert (result['h2h_home_wins'] >= 0).all()
+    assert (result['h2h_draws'] >= 0).all()
+    assert (result['h2h_away_wins'] >= 0).all()
+
+
+def test_h2h_does_not_mutate_input():
+    df = load_data("data/results.csv")
+    original_cols = list(df.columns)
+    compute_h2h(df)
+    assert list(df.columns) == original_cols
+
+
+from backend.model.features import build_features
+
+EXPECTED_FEATURE_COLS = [
+    'elo_diff', 'home_elo_before', 'away_elo_before',
+    'home_form', 'away_form',
+    'h2h_home_wins', 'h2h_draws', 'h2h_away_wins',
+    'is_neutral',
+]
+
+
+def test_build_features_returns_x_and_y():
+    df = load_data("data/results.csv")
+    X, y = build_features(df)
+    assert X.shape[0] == len(df)
+    assert y.shape[0] == len(df)
+
+
+def test_build_features_correct_columns():
+    df = load_data("data/results.csv")
+    X, y = build_features(df)
+    for col in EXPECTED_FEATURE_COLS:
+        assert col in X.columns, f"Missing feature column: {col}"
+
+
+def test_build_features_target_three_classes():
+    df = load_data("data/results.csv")
+    X, y = build_features(df)
+    assert set(y.unique()).issubset({0, 1, 2})
+
+
+def test_build_features_no_nulls():
+    df = load_data("data/results.csv")
+    X, y = build_features(df)
+    assert not X.isnull().any().any(), "X contains null values"
+    assert not y.isnull().any(), "y contains null values"

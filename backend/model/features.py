@@ -14,3 +14,58 @@ def load_data(path: str) -> pd.DataFrame:
     df['away_score'] = df['away_score'].astype(int)
     df = df.sort_values('date').reset_index(drop=True)
     return df
+
+
+# K-factors by tournament importance
+K_FACTORS = {
+    'FIFA World Cup': 60,
+    'UEFA Euro': 50,
+    'Copa America': 50,
+    'AFC Asian Cup': 45,
+    'Africa Cup of Nations': 45,
+    'Gold Cup': 40,
+    'Friendly': 20,
+}
+
+
+def _get_k_factor(tournament: str) -> float:
+    for key, k in K_FACTORS.items():
+        if key in tournament:
+            return k
+    return 30  # qualifiers and other competitions
+
+
+def compute_elo_ratings(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Compute each team's ELO rating at the time of each match (before the result).
+    df must be sorted by date (ascending). Starting ELO: 1500 for all teams.
+    Returns a new DataFrame with 'home_elo_before' and 'away_elo_before' columns.
+    """
+    elo: dict[str, float] = defaultdict(lambda: 1500.0)
+    home_elos: list[float] = []
+    away_elos: list[float] = []
+
+    for _, row in df.iterrows():
+        h, a = row['home_team'], row['away_team']
+        h_elo, a_elo = elo[h], elo[a]
+
+        home_elos.append(h_elo)
+        away_elos.append(a_elo)
+
+        k = _get_k_factor(row['tournament'])
+        home_expected = 1.0 / (1.0 + 10.0 ** ((a_elo - h_elo) / 400.0))
+
+        if row['home_score'] > row['away_score']:
+            home_actual = 1.0
+        elif row['home_score'] < row['away_score']:
+            home_actual = 0.0
+        else:
+            home_actual = 0.5
+
+        elo[h] = h_elo + k * (home_actual - home_expected)
+        elo[a] = a_elo + k * ((1.0 - home_actual) - (1.0 - home_expected))
+
+    result = df.copy()
+    result['home_elo_before'] = home_elos
+    result['away_elo_before'] = away_elos
+    return result

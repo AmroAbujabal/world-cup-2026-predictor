@@ -46,3 +46,41 @@ def test_user_predict_404_on_missing_match(client):
         "username": "alice", "match_id": 99999, "predicted_outcome": "home_win"
     })
     assert resp.status_code == 404
+
+
+def test_leaderboard_returns_entries_list(client):
+    resp = client.get("/leaderboard")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "entries" in data
+    assert isinstance(data["entries"], list)
+
+
+def test_score_results_updates_user_points(client):
+    from backend.db.database import SessionLocal
+    from backend.db.models import Match, User, UserPrediction
+    from datetime import datetime
+
+    db = SessionLocal()
+    match = Match(
+        home_team="Brazil", away_team="France",
+        match_date=datetime(2026, 7, 1), tournament="Test Cup",
+        is_locked=False,
+    )
+    db.add(match)
+    user = User(username="scorer_test_user")
+    db.add(user)
+    db.flush()
+    pred = UserPrediction(
+        user_id=user.id, match_id=match.id, predicted_outcome="home_win",
+    )
+    db.add(pred)
+    db.commit()
+    match_id = match.id
+    db.close()
+
+    resp = client.post("/results", json={"match_id": match_id, "home_score": 2, "away_score": 1})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["scored_predictions"] == 1
+    assert data["actual_outcome"] == "home_win"

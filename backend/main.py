@@ -24,3 +24,6 @@ def health():
 
 from backend.routes.predictions import router as predictions_router
 app.include_router(predictions_router)
+
+from backend.routes.users import router as users_router
+app.include_router(users_router)

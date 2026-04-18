@@ -60,6 +60,7 @@ def test_score_results_updates_user_points(client):
     from backend.db.database import SessionLocal
     from backend.db.models import Match, User, UserPrediction
     from datetime import datetime
+    import uuid
 
     db = SessionLocal()
     match = Match(
@@ -68,7 +69,7 @@ def test_score_results_updates_user_points(client):
         is_locked=False,
     )
     db.add(match)
-    user = User(username="scorer_test_user")
+    user = User(username=f"scorer_test_{uuid.uuid4().hex[:8]}")
     db.add(user)
     db.flush()
     pred = UserPrediction(

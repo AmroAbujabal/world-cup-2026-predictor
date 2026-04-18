@@ -1,5 +1,5 @@
 # backend/db/models.py
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -41,7 +41,7 @@ class UserPrediction(Base):
     match_id = Column(Integer, ForeignKey("matches.id"), nullable=False)
     predicted_outcome = Column(String, nullable=False)
     points_awarded = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = relationship("User", back_populates="predictions")
     match = relationship("Match", back_populates="predictions")

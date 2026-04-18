@@ -24,7 +24,7 @@ def _backtest_year(df_full: pd.DataFrame, year: int) -> tuple[float, list[dict[s
     """
     wc_mask = (
         (df_full['date'].dt.year == year) &
-        (df_full['tournament'].str.contains('FIFA World Cup', na=False))
+        (df_full['tournament'] == 'FIFA World Cup')
     )
     train_df = df_full[df_full['date'].dt.year < year].copy()
     test_df = df_full[wc_mask].copy()

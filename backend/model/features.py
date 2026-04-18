@@ -69,3 +69,38 @@ def compute_elo_ratings(df: pd.DataFrame) -> pd.DataFrame:
     result['home_elo_before'] = home_elos
     result['away_elo_before'] = away_elos
     return result
+
+
+def compute_recent_form(df: pd.DataFrame, n: int = 5) -> pd.DataFrame:
+    """
+    For each match, compute each team's average points per game over their
+    last n matches (Win=3, Draw=1, Loss=0). Returns values in [0, 3].
+    Teams with no prior history get 0.0.
+    """
+    team_history: dict[str, list[float]] = defaultdict(list)
+    home_forms: list[float] = []
+    away_forms: list[float] = []
+
+    for _, row in df.iterrows():
+        h, a = row['home_team'], row['away_team']
+
+        h_last = team_history[h][-n:]
+        a_last = team_history[a][-n:]
+
+        home_forms.append(sum(h_last) / len(h_last) if h_last else 0.0)
+        away_forms.append(sum(a_last) / len(a_last) if a_last else 0.0)
+
+        if row['home_score'] > row['away_score']:
+            team_history[h].append(3.0)
+            team_history[a].append(0.0)
+        elif row['home_score'] < row['away_score']:
+            team_history[h].append(0.0)
+            team_history[a].append(3.0)
+        else:
+            team_history[h].append(1.0)
+            team_history[a].append(1.0)
+
+    result = df.copy()
+    result['home_form'] = home_forms
+    result['away_form'] = away_forms
+    return result

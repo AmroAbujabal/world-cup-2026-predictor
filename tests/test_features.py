@@ -61,3 +61,36 @@ def test_elo_does_not_mutate_input():
     original_cols = list(df.columns)
     compute_elo_ratings(df)
     assert list(df.columns) == original_cols
+
+
+from backend.model.features import compute_recent_form
+
+
+def test_recent_form_columns_added():
+    df = load_data("data/results.csv")
+    result = compute_recent_form(df)
+    assert 'home_form' in result.columns
+    assert 'away_form' in result.columns
+
+
+def test_recent_form_first_match_is_zero():
+    """Teams with no match history yet should have form 0."""
+    df = load_data("data/results.csv")
+    result = compute_recent_form(df)
+    assert result['home_form'].iloc[0] == pytest.approx(0.0)
+    assert result['away_form'].iloc[0] == pytest.approx(0.0)
+
+
+def test_recent_form_in_range():
+    """Average points per game is in [0, 3]."""
+    df = load_data("data/results.csv")
+    result = compute_recent_form(df)
+    assert result['home_form'].between(0.0, 3.0).all()
+    assert result['away_form'].between(0.0, 3.0).all()
+
+
+def test_recent_form_does_not_mutate_input():
+    df = load_data("data/results.csv")
+    original_cols = list(df.columns)
+    compute_recent_form(df)
+    assert list(df.columns) == original_cols

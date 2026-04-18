@@ -20,3 +20,7 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+from backend.routes.predictions import router as predictions_router
+app.include_router(predictions_router)

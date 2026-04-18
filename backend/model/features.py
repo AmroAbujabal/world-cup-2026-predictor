@@ -7,6 +7,8 @@ import pandas as pd
 def load_data(path: str) -> pd.DataFrame:
     """Load and clean the international football results CSV."""
     df = pd.read_csv(path, parse_dates=['date'])
+    df['home_score'] = pd.to_numeric(df['home_score'], errors='coerce')
+    df['away_score'] = pd.to_numeric(df['away_score'], errors='coerce')
     df = df.dropna(subset=['home_score', 'away_score'])
     df['home_score'] = df['home_score'].astype(int)
     df['away_score'] = df['away_score'].astype(int)

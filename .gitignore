@@ -10,3 +10,7 @@ dev.db
 *.egg-info/
 .venv/
 data/results.csv
+.DS_Store
+*.log
+.vscode/
+.idea/

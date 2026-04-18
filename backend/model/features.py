@@ -22,7 +22,7 @@ K_FACTORS = {
     'UEFA Euro': 50,
     'Copa America': 50,
     'AFC Asian Cup': 45,
-    'Africa Cup of Nations': 45,
+    'African Cup of Nations': 45,
     'Gold Cup': 40,
     'Friendly': 20,
 }

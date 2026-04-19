@@ -1,5 +1,6 @@
 // frontend/src/pages/Analysis.jsx
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -96,10 +97,21 @@ export default function Analysis() {
         <p className="text-gray-300 text-base leading-relaxed">
           An XGBoost model trained on 49,287 international matches (1872–2024) to predict match outcomes and simulate the full knockout bracket using ELO ratings, recent form, and head-to-head records.
         </p>
-        <div className="mt-5 flex gap-3 flex-wrap">
-          {['XGBoost', 'FastAPI', 'React', 'ELO Ratings', '49k matches'].map(tag => (
-            <span key={tag} className="text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700 px-3 py-1 rounded-full">{tag}</span>
-          ))}
+        <div className="mt-6 flex flex-wrap items-center gap-4">
+          <Link
+            to="/groups"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-2.5 rounded-xl transition-colors text-sm"
+          >
+            Compete against the model
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </Link>
+          <div className="flex gap-2 flex-wrap">
+            {['XGBoost', 'FastAPI', 'React', 'ELO Ratings', '49k matches'].map(tag => (
+              <span key={tag} className="text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700 px-3 py-1 rounded-full">{tag}</span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -216,6 +228,49 @@ export default function Analysis() {
           </div>
         )}
       </Section>
+
+      {/* Challenge CTA */}
+      <div className="my-14 rounded-2xl border border-emerald-800 bg-gradient-to-br from-emerald-950/60 to-gray-900 px-8 py-10">
+        <div className="text-center mb-8">
+          <p className="text-xs font-bold uppercase tracking-widest text-emerald-500 mb-3">Your Turn</p>
+          <h2 className="text-3xl font-extrabold text-white mb-3">
+            Think you can beat the model?
+          </h2>
+          <p className="text-gray-300 text-base max-w-lg mx-auto leading-relaxed">
+            The model has made its picks. Now build your own bracket — choose your group stage winners, pick your third-place qualifiers, and call every knockout match. See who gets it right when the tournament kicks off.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            to="/groups"
+            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-3.5 rounded-xl transition-colors text-base"
+          >
+            Build my bracket
+            <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </Link>
+          <Link
+            to="/leaderboard"
+            className="text-sm font-medium text-gray-400 hover:text-white transition-colors"
+          >
+            View leaderboard →
+          </Link>
+        </div>
+        <div className="mt-8 grid grid-cols-3 gap-4 text-center border-t border-emerald-900/50 pt-8">
+          {[
+            { n: '48', label: 'Teams', sub: '12 groups' },
+            { n: '31', label: 'Matches to pick', sub: 'R32 → Final' },
+            { n: '40.6%', label: 'Model accuracy', sub: '2018 World Cup' },
+          ].map(s => (
+            <div key={s.label}>
+              <div className="text-2xl font-extrabold text-emerald-400">{s.n}</div>
+              <div className="text-sm font-semibold text-white mt-0.5">{s.label}</div>
+              <div className="text-xs text-gray-500">{s.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Stack */}
       <Section number="6" title="Tech Stack">

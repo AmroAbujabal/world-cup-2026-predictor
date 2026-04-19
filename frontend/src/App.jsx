@@ -6,11 +6,12 @@ import Analysis from './pages/Analysis';
 
 function Nav() {
   const { pathname } = useLocation();
+  const isActive = (to) => pathname === to || (to === '/' && pathname === '/');
   const link = (to, label) => (
     <Link
       to={to}
       className={`text-sm font-medium transition-colors ${
-        pathname === to ? 'text-white' : 'text-gray-500 hover:text-gray-200'
+        isActive(to) ? 'text-white' : 'text-gray-500 hover:text-gray-200'
       }`}
     >
       {label}
@@ -21,11 +22,15 @@ function Nav() {
       <Link to="/" className="text-base font-extrabold text-emerald-400 hover:text-emerald-300 transition-colors tracking-tight">
         WC 2026 Predictor
       </Link>
-      <div className="flex gap-6">
-        {link('/', 'Groups')}
-        {link('/bracket', 'Bracket')}
-        {link('/analysis', 'Analysis')}
+      <div className="flex items-center gap-6">
+        {link('/', 'Analysis')}
         {link('/leaderboard', 'Leaderboard')}
+        <Link
+          to="/groups"
+          className="text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg transition-colors"
+        >
+          Compete →
+        </Link>
       </div>
     </nav>
   );
@@ -38,9 +43,9 @@ export default function App() {
         <Nav />
         <main className="px-4 py-8">
           <Routes>
-            <Route path="/" element={<GroupStage />} />
+            <Route path="/" element={<Analysis />} />
+            <Route path="/groups" element={<GroupStage />} />
             <Route path="/bracket" element={<BracketChallenge />} />
-            <Route path="/analysis" element={<Analysis />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
           </Routes>
         </main>

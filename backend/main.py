@@ -10,7 +10,12 @@ app = FastAPI(title="World Cup Predictor API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5200"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5200",
+        "https://frontend-nine-alpha-56.vercel.app",
+        "https://frontend-o58b5486z-amrabujabal35-2594s-projects.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

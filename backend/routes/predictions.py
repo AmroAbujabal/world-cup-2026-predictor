@@ -31,23 +31,39 @@ def predict(request: PredictRequest):
     )
 
 
+# Predicted R32 based on the official 2026 WC draw (December 2024)
+# Pairings follow FIFA format: 1A vs 2B, 1B vs 2A, 1C vs 2D, ... 1K vs 2L, 1L vs 2K
+# Final 4 matches use 8 best 3rd-place qualifiers (most likely candidates shown)
 BRACKET_R32 = [
-    ("France",      "Scotland"),
-    ("Brazil",      "Ghana"),
-    ("Argentina",   "Saudi Arabia"),
-    ("Portugal",    "Canada"),
-    ("Spain",       "Turkey"),
-    ("Germany",     "Iran"),
-    ("England",     "Serbia"),
+    # Group A winner vs Group B runner-up
+    ("Mexico",      "Canada"),
+    # Group B winner vs Group A runner-up
+    ("Switzerland", "South Korea"),
+    # Group C winner vs Group D runner-up
+    ("Brazil",      "Turkey"),
+    # Group D winner vs Group C runner-up
+    ("United States", "Morocco"),
+    # Group E winner vs Group F runner-up
+    ("Germany",     "Japan"),
+    # Group F winner vs Group E runner-up
     ("Netherlands", "Ecuador"),
-    ("Belgium",     "Australia"),
-    ("Italy",       "Nigeria"),
-    ("Uruguay",     "USA"),
-    ("Colombia",    "Mexico"),
-    ("Croatia",     "Switzerland"),
-    ("Denmark",     "South Korea"),
-    ("Morocco",     "Senegal"),
-    ("Japan",       "Poland"),
+    # Group G winner vs Group H runner-up
+    ("Belgium",     "Uruguay"),
+    # Group H winner vs Group G runner-up
+    ("Spain",       "Egypt"),
+    # Group I winner vs Group J runner-up
+    ("France",      "Austria"),
+    # Group J winner vs Group I runner-up
+    ("Argentina",   "Senegal"),
+    # Group K winner vs Group L runner-up
+    ("Portugal",    "Croatia"),
+    # Group L winner vs Group K runner-up
+    ("England",     "Colombia"),
+    # Best 3rd-place matches
+    ("South Africa",           "Bosnia and Herzegovina"),
+    ("Scotland",               "Paraguay"),
+    ("Ivory Coast",            "Sweden"),
+    ("Iran",                   "Norway"),
 ]
 
 

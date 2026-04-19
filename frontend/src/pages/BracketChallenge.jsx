@@ -5,24 +5,25 @@ import MatchupCard from '../components/MatchupCard';
 import { predictMatch, submitUserPrediction } from '../api/client';
 import { buildR32 } from '../data/wc2026';
 
-// FIFA World Cup 2026 — Round of 32 (full 32-team knockout bracket)
+// FIFA World Cup 2026 — Predicted Round of 32
+// Based on official draw (Dec 2024): 1A vs 2B, 1B vs 2A, etc.
 const INITIAL_R32 = [
-  { id: 'r32_1',  team1: 'France',      team2: 'Scotland' },
-  { id: 'r32_2',  team1: 'Brazil',      team2: 'Ghana' },
-  { id: 'r32_3',  team1: 'Argentina',   team2: 'Saudi Arabia' },
-  { id: 'r32_4',  team1: 'Portugal',    team2: 'Canada' },
-  { id: 'r32_5',  team1: 'Spain',       team2: 'Turkey' },
-  { id: 'r32_6',  team1: 'Germany',     team2: 'Iran' },
-  { id: 'r32_7',  team1: 'England',     team2: 'Serbia' },
-  { id: 'r32_8',  team1: 'Netherlands', team2: 'Ecuador' },
-  { id: 'r32_9',  team1: 'Belgium',     team2: 'Australia' },
-  { id: 'r32_10', team1: 'Italy',       team2: 'Nigeria' },
-  { id: 'r32_11', team1: 'Uruguay',     team2: 'USA' },
-  { id: 'r32_12', team1: 'Colombia',    team2: 'Mexico' },
-  { id: 'r32_13', team1: 'Croatia',     team2: 'Switzerland' },
-  { id: 'r32_14', team1: 'Denmark',     team2: 'South Korea' },
-  { id: 'r32_15', team1: 'Morocco',     team2: 'Senegal' },
-  { id: 'r32_16', team1: 'Japan',       team2: 'Poland' },
+  { id: 'r32_1',  team1: 'Mexico',               team2: 'Canada' },
+  { id: 'r32_2',  team1: 'Switzerland',           team2: 'South Korea' },
+  { id: 'r32_3',  team1: 'Brazil',                team2: 'Turkey' },
+  { id: 'r32_4',  team1: 'USA',                   team2: 'Morocco' },
+  { id: 'r32_5',  team1: 'Germany',               team2: 'Japan' },
+  { id: 'r32_6',  team1: 'Netherlands',           team2: 'Ecuador' },
+  { id: 'r32_7',  team1: 'Belgium',               team2: 'Uruguay' },
+  { id: 'r32_8',  team1: 'Spain',                 team2: 'Egypt' },
+  { id: 'r32_9',  team1: 'France',                team2: 'Austria' },
+  { id: 'r32_10', team1: 'Argentina',             team2: 'Senegal' },
+  { id: 'r32_11', team1: 'Portugal',              team2: 'Croatia' },
+  { id: 'r32_12', team1: 'England',               team2: 'Colombia' },
+  { id: 'r32_13', team1: 'South Africa',          team2: 'Bosnia and Herzegovina' },
+  { id: 'r32_14', team1: 'Scotland',              team2: 'Paraguay' },
+  { id: 'r32_15', team1: 'Ivory Coast',           team2: 'Sweden' },
+  { id: 'r32_16', team1: 'Iran',                  team2: 'Norway' },
 ];
 
 const ROUNDS = ['Round of 32', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];

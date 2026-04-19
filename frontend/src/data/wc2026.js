@@ -1,17 +1,17 @@
-// FIFA World Cup 2026 — 48 teams, 12 groups
+// FIFA World Cup 2026 — 48 teams, 12 groups (official draw, December 2024)
 export const GROUPS = {
-  A: ['USA',         'Morocco',    'Panama',       'Bolivia'],
-  B: ['Canada',      'England',    'Senegal',      'Honduras'],
-  C: ['Mexico',      'Colombia',   'Ivory Coast',  'New Zealand'],
-  D: ['Brazil',      'Switzerland','Nigeria',      'Jordan'],
-  E: ['France',      'Denmark',    'Cameroon',     'Indonesia'],
-  F: ['Argentina',   'Croatia',    'Saudi Arabia', 'Tunisia'],
-  G: ['Spain',       'Japan',      'DR Congo',     'Serbia'],
-  H: ['Germany',     'Ecuador',    'South Korea',  'Austria'],
-  I: ['Portugal',    'Uruguay',    'Egypt',        'Iraq'],
-  J: ['Netherlands', 'Venezuela',  'Algeria',      'Scotland'],
-  K: ['Belgium',     'Italy',      'Iran',         'Costa Rica'],
-  L: ['Turkey',      'Poland',     'Australia',    'Uzbekistan'],
+  A: ['Mexico',      'South Africa',          'South Korea',  'Czech Republic'],
+  B: ['Canada',      'Bosnia and Herzegovina', 'Qatar',        'Switzerland'],
+  C: ['Brazil',      'Morocco',               'Haiti',        'Scotland'],
+  D: ['USA',         'Paraguay',              'Australia',    'Turkey'],
+  E: ['Germany',     'Curacao',               'Ivory Coast',  'Ecuador'],
+  F: ['Netherlands', 'Japan',                 'Sweden',       'Tunisia'],
+  G: ['Belgium',     'Iran',                  'Egypt',        'New Zealand'],
+  H: ['Spain',       'Uruguay',               'Saudi Arabia', 'Cape Verde'],
+  I: ['France',      'Senegal',               'Iraq',         'Norway'],
+  J: ['Argentina',   'Algeria',               'Austria',      'Jordan'],
+  K: ['Portugal',    'DR Congo',              'Uzbekistan',   'Colombia'],
+  L: ['England',     'Croatia',               'Ghana',        'Panama'],
 };
 
 export const GROUP_LABELS = Object.keys(GROUPS);

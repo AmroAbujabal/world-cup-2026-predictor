@@ -116,11 +116,14 @@ export default function BracketChallenge() {
     setSubmitting(true);
     setSubmitMsg('');
     try {
-      // Submit each pick as a user prediction (match_id maps to matchup index)
+      // For each pick, derive outcome based on whether winner is team1 (home_win) or team2 (away_win)
+      const allMatchups = bracket.flat();
       await Promise.all(
-        Object.entries(picks).map(([matchupId, winner], idx) =>
-          submitUserPrediction(username.trim(), idx + 1, 'home_win').catch(() => null)
-        )
+        Object.entries(picks).map(([matchupId, winner], idx) => {
+          const matchup = allMatchups.find(m => m.id === matchupId);
+          const outcome = matchup && matchup.team2 === winner ? 'away_win' : 'home_win';
+          return submitUserPrediction(username.trim(), idx + 1, outcome).catch(() => null);
+        })
       );
       setSubmitted(true);
       setSubmitMsg('');

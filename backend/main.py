@@ -8,19 +8,41 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="World Cup Predictor API", version="1.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5200",
-        "https://frontend-nine-alpha-56.vercel.app",
-        "https://frontend-o58b5486z-amrabujabal35-2594s-projects.vercel.app",
-        "https://frontend-dczn3buxk-amrabujabal35-2594s-projects.vercel.app",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+import re
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request as StarletteRequest
+
+ALLOWED_ORIGINS = re.compile(
+    r"^(http://localhost:\d+|https://[\w-]+-amrabujabal35-2594s-projects\.vercel\.app|https://frontend-nine-alpha-56\.vercel\.app)$"
 )
+
+class DynamicCORSMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: StarletteRequest, call_next):
+        origin = request.headers.get("origin", "")
+        response = await call_next(request)
+        if ALLOWED_ORIGINS.match(origin):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+
+app.add_middleware(DynamicCORSMiddleware)
+
+# Preflight handler
+@app.options("/{rest_of_path:path}")
+async def preflight(rest_of_path: str, request: StarletteRequest):
+    from fastapi import Response
+    origin = request.headers.get("origin", "")
+    headers = {}
+    if ALLOWED_ORIGINS.match(origin):
+        headers = {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Methods": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    return Response(status_code=204, headers=headers)
 
 
 @app.get("/health")

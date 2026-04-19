@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import MatchupCard from '../components/MatchupCard';
 import { predictMatch, submitUserPrediction } from '../api/client';
+import { buildR32 } from '../data/wc2026';
 
 // FIFA World Cup 2026 — Round of 32 (full 32-team knockout bracket)
 const INITIAL_R32 = [
@@ -75,8 +76,24 @@ export default function BracketChallenge() {
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState('');
 
-  // Use group-stage picks passed via router state, or fall back to default R32
-  const r32Source = location.state?.r32 || INITIAL_R32;
+  // Use group-stage picks from router state, localStorage, or default R32
+  const r32Source = (() => {
+    if (location.state?.r32) return location.state.r32;
+    try {
+      const saved = localStorage.getItem('wc2026_group_picks');
+      if (saved) {
+        const { selections, thirdSelected } = JSON.parse(saved);
+        const allDone = Object.values(selections).every(s => s.length === 2);
+        if (allDone && thirdSelected?.length === 8) {
+          const groupResults = Object.fromEntries(
+            Object.entries(selections).map(([g, s]) => [g, { winner: s[0], runnerUp: s[1] }])
+          );
+          return buildR32(groupResults, thirdSelected);
+        }
+      }
+    } catch { /* fall through */ }
+    return INITIAL_R32;
+  })();
 
   const [bracket, setBracket] = useState([
     r32Source.map(m => ({ ...m, prob1: null, prob2: null })),

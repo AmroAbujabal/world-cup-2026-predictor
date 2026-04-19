@@ -51,6 +51,31 @@ BRACKET_R32 = [
 ]
 
 
+@router.post("/group-standings")
+def group_standings(request: dict):
+    """Predict group standings by simulating all 6 round-robin matches."""
+    teams = request.get("teams", [])
+    if len(teams) != 4:
+        raise HTTPException(status_code=422, detail="Must provide exactly 4 teams")
+    predictor = get_predictor()
+    from itertools import combinations
+    points = {t: 0 for t in teams}
+    prob_score = {t: 0.0 for t in teams}
+    for home, away in combinations(teams, 2):
+        p = predictor.predict(home, away, neutral=True)
+        if p.prob_home_win >= p.prob_draw and p.prob_home_win >= p.prob_away_win:
+            points[home] += 3
+        elif p.prob_away_win >= p.prob_home_win and p.prob_away_win >= p.prob_draw:
+            points[away] += 3
+        else:
+            points[home] += 1
+            points[away] += 1
+        prob_score[home] += p.prob_home_win
+        prob_score[away] += p.prob_away_win
+    standings = sorted(teams, key=lambda t: (points[t], prob_score[t]), reverse=True)
+    return {"standings": [{"team": t, "pts": points[t]} for t in standings]}
+
+
 @router.get("/bracket-predictions")
 def bracket_predictions():
     """Run the AI model through all knockout rounds and return the full predicted bracket."""

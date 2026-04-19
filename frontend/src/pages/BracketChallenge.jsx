@@ -1,5 +1,6 @@
 // frontend/src/pages/BracketChallenge.jsx
 import { useEffect, useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import MatchupCard from '../components/MatchupCard';
 import { predictMatch, submitUserPrediction } from '../api/client';
 
@@ -68,13 +69,17 @@ function ModelBanner() {
 }
 
 export default function BracketChallenge() {
+  const location = useLocation();
   const [username, setUsername] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState('');
 
+  // Use group-stage picks passed via router state, or fall back to default R32
+  const r32Source = location.state?.r32 || INITIAL_R32;
+
   const [bracket, setBracket] = useState([
-    INITIAL_R32.map(m => ({ ...m, prob1: null, prob2: null })),
+    r32Source.map(m => ({ ...m, prob1: null, prob2: null })),
     buildEmptyRound(8, 'r16'),
     buildEmptyRound(4, 'qf'),
     buildEmptyRound(2, 'sf'),
@@ -104,7 +109,8 @@ export default function BracketChallenge() {
   }, []);
 
   useEffect(() => {
-    INITIAL_R32.forEach(m => fetchProbs(m.id, m.team1, m.team2));
+    r32Source.forEach(m => fetchProbs(m.id, m.team1, m.team2));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchProbs]);
 
   const handlePick = useCallback((matchupId, winner) => {

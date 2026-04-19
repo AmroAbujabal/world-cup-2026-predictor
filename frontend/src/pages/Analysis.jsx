@@ -91,9 +91,12 @@ export default function Analysis() {
       {/* Header */}
       <div className="mb-12">
         <p className="text-xs font-bold uppercase tracking-widest text-emerald-500 mb-3">Research Report · April 2026</p>
-        <h1 className="text-4xl font-extrabold text-white leading-snug mb-4">
+        <h1 className="text-4xl font-extrabold text-white leading-snug mb-4 mt-1">
           Predicting the 2026 FIFA World Cup with Machine Learning
         </h1>
+        <p className="text-sm text-gray-500 mb-4">
+          By <span className="text-gray-300 font-medium">Amr Abujabal</span>
+        </p>
         <p className="text-gray-300 text-base leading-relaxed">
           An XGBoost model trained on 49,287 international matches (1872–2024) to predict match outcomes and simulate the full knockout bracket using ELO ratings, recent form, and head-to-head records.
         </p>

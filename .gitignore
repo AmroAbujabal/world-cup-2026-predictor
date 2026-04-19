@@ -1,1 +1,16 @@
 .worktrees/
+__pycache__/
+*.pyc
+.env
+backend/model/trained_model.pkl
+.pytest_cache/
+frontend/node_modules/
+frontend/dist/
+dev.db
+*.egg-info/
+.venv/
+data/results.csv
+.DS_Store
+*.log
+.vscode/
+.idea/

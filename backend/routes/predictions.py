@@ -31,6 +31,57 @@ def predict(request: PredictRequest):
     )
 
 
+BRACKET_R32 = [
+    ("France",      "Scotland"),
+    ("Brazil",      "Ghana"),
+    ("Argentina",   "Saudi Arabia"),
+    ("Portugal",    "Canada"),
+    ("Spain",       "Turkey"),
+    ("Germany",     "Iran"),
+    ("England",     "Serbia"),
+    ("Netherlands", "Ecuador"),
+    ("Belgium",     "Australia"),
+    ("Italy",       "Nigeria"),
+    ("Uruguay",     "USA"),
+    ("Colombia",    "Mexico"),
+    ("Croatia",     "Switzerland"),
+    ("Denmark",     "South Korea"),
+    ("Morocco",     "Senegal"),
+    ("Japan",       "Poland"),
+]
+
+
+@router.get("/bracket-predictions")
+def bracket_predictions():
+    """Run the AI model through all knockout rounds and return the full predicted bracket."""
+    predictor = get_predictor()
+
+    def predict_winner(team1, team2):
+        p = predictor.predict(team1, team2, neutral=True)
+        winner = team1 if p.prob_home_win >= p.prob_away_win else team2
+        return {
+            "team1": team1, "team2": team2,
+            "prob1": round(p.prob_home_win, 3),
+            "prob_draw": round(p.prob_draw, 3),
+            "prob2": round(p.prob_away_win, 3),
+            "predicted_winner": winner,
+        }
+
+    rounds = []
+    round_names = ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"]
+
+    pairs = BRACKET_R32
+    for round_name in round_names:
+        matchups = [predict_winner(a, b) for a, b in pairs]
+        rounds.append({"round": round_name, "matchups": matchups})
+        winners = [m["predicted_winner"] for m in matchups]
+        if len(winners) > 1:
+            pairs = [(winners[i], winners[i + 1]) for i in range(0, len(winners), 2)]
+
+    champion = rounds[-1]["matchups"][0]["predicted_winner"] if rounds else None
+    return {"rounds": rounds, "champion": champion}
+
+
 @router.post("/user/predict", response_model=UserPredictResponse)
 def user_predict(request: UserPredictRequest, db: Session = Depends(get_db)):
     if request.predicted_outcome not in VALID_OUTCOMES:

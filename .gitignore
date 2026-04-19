@@ -9,7 +9,7 @@ frontend/dist/
 dev.db
 *.egg-info/
 .venv/
-data/results.csv
+# data/results.csv  # included in repo for deployment
 .DS_Store
 *.log
 .vscode/

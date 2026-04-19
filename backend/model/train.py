@@ -13,7 +13,7 @@ def train_model(X: pd.DataFrame, y: pd.Series) -> XGBClassifier:
         colsample_bytree=0.8,
         eval_metric='mlogloss',
         random_state=42,
-        n_jobs=-1,
+        n_jobs=1,  # single-threaded to cap memory usage on constrained servers
     )
     model.fit(X, y)
     return model

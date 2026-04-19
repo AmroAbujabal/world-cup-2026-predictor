@@ -6,12 +6,16 @@ import pandas as pd
 
 def load_data(path: str) -> pd.DataFrame:
     """Load and clean the international football results CSV."""
-    df = pd.read_csv(path, parse_dates=['date'])
+    df = pd.read_csv(
+        path,
+        parse_dates=['date'],
+        dtype={'home_team': 'category', 'away_team': 'category', 'tournament': 'category'},
+    )
     df['home_score'] = pd.to_numeric(df['home_score'], errors='coerce')
     df['away_score'] = pd.to_numeric(df['away_score'], errors='coerce')
     df = df.dropna(subset=['home_score', 'away_score'])
-    df['home_score'] = df['home_score'].astype(int)
-    df['away_score'] = df['away_score'].astype(int)
+    df['home_score'] = df['home_score'].astype('int16')
+    df['away_score'] = df['away_score'].astype('int16')
     df = df.sort_values('date').reset_index(drop=True)
     return df
 
@@ -155,18 +159,19 @@ FEATURE_COLS = [
 ]
 
 
-def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
+def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame]:
     """
-    Apply all feature engineering steps and return (X, y).
+    Apply all feature engineering steps and return (X, y, enriched_df).
     X: DataFrame with FEATURE_COLS columns.
     y: Series with values 0=home win, 1=draw, 2=away win.
+    enriched_df: full dataframe with all feature columns (for ELO/form/H2H extraction).
     """
     df = compute_elo_ratings(df)
     df = compute_recent_form(df)
     df = compute_h2h(df)
 
     df['elo_diff'] = df['home_elo_before'] - df['away_elo_before']
-    df['is_neutral'] = df['neutral'].astype(int)
+    df['is_neutral'] = df['neutral'].astype('int8')
 
     X = df[FEATURE_COLS].copy()
 
@@ -178,6 +183,6 @@ def build_features(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     y = pd.Series(
         np.select(conditions, [0, 1, 2]),
         name='outcome',
-        dtype=int,
+        dtype='int8',
     )
-    return X, y
+    return X, y, df

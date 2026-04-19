@@ -2,10 +2,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 import pandas as pd
-from backend.model.features import (
-    load_data, compute_elo_ratings, compute_recent_form, compute_h2h,
-    build_features, FEATURE_COLS, _get_k_factor,
-)
+from backend.model.features import load_data, build_features
 from backend.model.train import train_model
 
 
@@ -23,62 +20,59 @@ class PredictorService:
 
     def __init__(self, data_path: str):
         df = load_data(data_path)
-        X, y = build_features(df)
+        # Run feature pipeline once — reuse enriched df for ELO/form/H2H extraction
+        X, y, enriched = build_features(df)
+        del df  # free raw df immediately
+
+        # Extract final ELO and form from last row each team appears in
+        self._current_elo = self._extract_final_elo(enriched)
+        self._current_form = self._extract_final_form(enriched)
+        # Compact H2H dict: frozenset(team1,team2) -> list of result strings
+        self._h2h = self._extract_h2h(enriched)
+        del enriched  # free enriched df before training (biggest memory spike)
+
         self._model = train_model(X, y)
-        self._current_elo = self._compute_final_elo(df)
-        self._current_form = self._compute_final_form(df)
-        self._df_enriched = compute_h2h(compute_recent_form(compute_elo_ratings(df)))
+        del X, y
 
-    def _compute_final_elo(self, df: pd.DataFrame) -> dict[str, float]:
-        """Return each team's ELO after processing the entire dataset."""
-        elo: dict[str, float] = defaultdict(lambda: 1500.0)
-        for _, row in df.iterrows():
-            h, a = row['home_team'], row['away_team']
-            h_elo, a_elo = elo[h], elo[a]
-            k = _get_k_factor(row['tournament'])
-            home_expected = 1.0 / (1.0 + 10.0 ** ((a_elo - h_elo) / 400.0))
-            if row['home_score'] > row['away_score']:
-                home_actual = 1.0
-            elif row['home_score'] < row['away_score']:
-                home_actual = 0.0
-            else:
-                home_actual = 0.5
-            elo[h] = h_elo + k * (home_actual - home_expected)
-            elo[a] = a_elo + k * ((1.0 - home_actual) - (1.0 - home_expected))
-        return dict(elo)
+    def _extract_final_elo(self, enriched: pd.DataFrame) -> dict[str, float]:
+        """Extract each team's latest ELO from the enriched dataframe."""
+        elo: dict[str, float] = {}
+        for _, row in enriched[['home_team', 'away_team', 'home_elo_before', 'away_elo_before']].iterrows():
+            elo[row['home_team']] = row['home_elo_before']
+            elo[row['away_team']] = row['away_elo_before']
+        return elo
 
-    def _compute_final_form(self, df: pd.DataFrame, n: int = 5) -> dict[str, float]:
-        """Return each team's form (avg pts/game over last n matches) at end of dataset."""
-        history: dict[str, list[float]] = defaultdict(list)
-        for _, row in df.iterrows():
+    def _extract_final_form(self, enriched: pd.DataFrame) -> dict[str, float]:
+        """Extract each team's latest form from the enriched dataframe."""
+        form: dict[str, float] = {}
+        for _, row in enriched[['home_team', 'away_team', 'home_form', 'away_form']].iterrows():
+            form[row['home_team']] = row['home_form']
+            form[row['away_team']] = row['away_form']
+        return form
+
+    def _extract_h2h(self, enriched: pd.DataFrame) -> dict:
+        """Build compact H2H dict from enriched dataframe."""
+        records: dict = defaultdict(list)
+        for _, row in enriched[['home_team', 'away_team', 'home_score', 'away_score']].iterrows():
             h, a = row['home_team'], row['away_team']
+            key = frozenset([h, a])
             if row['home_score'] > row['away_score']:
-                history[h].append(3.0); history[a].append(0.0)
+                records[key].append(h)
             elif row['home_score'] < row['away_score']:
-                history[h].append(0.0); history[a].append(3.0)
+                records[key].append(a)
             else:
-                history[h].append(1.0); history[a].append(1.0)
-        return {
-            team: sum(pts[-n:]) / len(pts[-n:]) if pts else 0.0
-            for team, pts in history.items()
-        }
+                records[key].append('draw')
+        return dict(records)
 
     def _get_h2h(self, home_team: str, away_team: str) -> tuple[int, int, int]:
-        """Get most recent H2H counts (home_wins, draws, away_wins) from dataset."""
-        mask = (
-            ((self._df_enriched['home_team'] == home_team) &
-             (self._df_enriched['away_team'] == away_team)) |
-            ((self._df_enriched['home_team'] == away_team) &
-             (self._df_enriched['away_team'] == home_team))
-        )
-        recent = self._df_enriched[mask].tail(10)
-        if recent.empty:
+        """Get most recent H2H counts (home_wins, draws, away_wins)."""
+        key = frozenset([home_team, away_team])
+        past = self._h2h.get(key, [])[-10:]
+        if not past:
             return 0, 0, 0
-        hw = int(((recent['home_team'] == home_team) & (recent['home_score'] > recent['away_score'])).sum() +
-                 ((recent['away_team'] == home_team) & (recent['away_score'] > recent['home_score'])).sum())
-        d = int((recent['home_score'] == recent['away_score']).sum())
-        aw = int(((recent['home_team'] == away_team) & (recent['home_score'] > recent['away_score'])).sum() +
-                 ((recent['away_team'] == away_team) & (recent['away_score'] > recent['home_score'])).sum())
+        hw = sum(1 for r in past if r == home_team)
+        d = sum(1 for r in past if r == 'draw')
+        aw = sum(1 for r in past if r == away_team)
         return hw, d, aw
 
     def predict(self, home_team: str, away_team: str, neutral: bool = True) -> MatchPrediction:

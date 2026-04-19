@@ -15,6 +15,7 @@ app.add_middleware(
         "http://localhost:5200",
         "https://frontend-nine-alpha-56.vercel.app",
         "https://frontend-o58b5486z-amrabujabal35-2594s-projects.vercel.app",
+        "https://frontend-dczn3buxk-amrabujabal35-2594s-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],

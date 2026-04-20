@@ -145,7 +145,16 @@ def user_predict(request: UserPredictRequest, db: Session = Depends(get_db)):
         UserPrediction.match_id == request.match_id,
     ).first()
     if existing:
-        raise HTTPException(status_code=409, detail="Prediction already submitted for this match")
+        # Allow updating a prediction as long as the match isn't locked
+        existing.predicted_outcome = request.predicted_outcome
+        db.commit()
+        return UserPredictResponse(
+            id=existing.id,
+            username=request.username,
+            match_id=request.match_id,
+            predicted_outcome=request.predicted_outcome,
+            message="Prediction updated",
+        )
 
     prediction = UserPrediction(
         user_id=user.id,

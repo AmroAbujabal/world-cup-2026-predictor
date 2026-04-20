@@ -36,14 +36,28 @@ cd frontend && vercel --prod
 - Model trains once on first API request (~30s), cached via `lru_cache(maxsize=1)` in `backend/routes/predictions.py`
 - All WC matches use `neutral=True`
 - Group picks are persisted to `localStorage` key `wc2026_group_picks`
-- GroupStage (/) → navigate('/bracket', { state: { r32 } }) — BracketChallenge also reads localStorage as fallback
+- Submitted bracket username stored in `localStorage` key `wc2026_bracket_submission`
+- GroupStage (`/`) → navigate('/bracket', { state: { r32 } }) — BracketChallenge also reads localStorage as fallback
 - CORS uses regex pattern match for all `*.vercel.app` preview URLs (DynamicCORSMiddleware in main.py)
+- 31 WC knockout matches are seeded into DB on first startup (`_seed_matches()` in main.py), IDs 1–31
+- `/user/predict` is an upsert — re-submitting updates the prediction rather than erroring
+- To score match results after games are played: `python scripts/score_result.py <match_id> <home> <away>`
+
+## Routes
+
+- `/` — GroupStage (landing page / compete flow)
+- `/groups` — GroupStage alias
+- `/bracket` — BracketChallenge (knockout bracket)
+- `/analysis` — Analysis (ML research writeup)
+- `/leaderboard` — Leaderboard
 
 ## Key files
 
 - `backend/model/predict.py` — PredictorService, feature engineering, XGBoost training
-- `backend/routes/predictions.py` — /predict, /group-standings, /bracket-predictions
+- `backend/routes/predictions.py` — /predict, /group-standings, /bracket-predictions, /user/predict
+- `backend/routes/users.py` — /leaderboard, /results
 - `frontend/src/data/wc2026.js` — 48 teams, 12 groups, buildR32()
-- `frontend/src/pages/GroupStage.jsx` — home page, full group stage picker
+- `frontend/src/pages/GroupStage.jsx` — landing page, group stage picker
 - `frontend/src/pages/BracketChallenge.jsx` — knockout bracket challenge
+- `scripts/score_result.py` — enter real match results to trigger leaderboard scoring
 - `data/results.csv` — 49,287 international matches (1872–2024)

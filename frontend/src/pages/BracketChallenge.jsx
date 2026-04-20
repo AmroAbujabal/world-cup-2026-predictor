@@ -83,10 +83,16 @@ function ModelBanner() {
   );
 }
 
+const SUBMISSION_KEY = 'wc2026_bracket_submission';
+
+function getSavedSubmission() {
+  try { return JSON.parse(localStorage.getItem(SUBMISSION_KEY)) || null; } catch { return null; }
+}
+
 export default function BracketChallenge() {
   const location = useLocation();
-  const [username, setUsername] = useState('');
-  const [submitted, setSubmitted] = useState(false);
+  const [username, setUsername] = useState(() => getSavedSubmission()?.username || '');
+  const [submitted, setSubmitted] = useState(() => !!getSavedSubmission()?.username);
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState('');
 
@@ -197,6 +203,7 @@ export default function BracketChallenge() {
           return submitUserPrediction(username.trim(), dbMatchId, outcome).catch(() => null);
         })
       );
+      localStorage.setItem(SUBMISSION_KEY, JSON.stringify({ username: username.trim() }));
       setSubmitted(true);
       setSubmitMsg('');
     } catch {

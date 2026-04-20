@@ -28,21 +28,21 @@ function GroupCard({ groupLetter, teams, selections, aiRanking, loading, onToggl
   const isDone = selections.length === 2;
 
   return (
-    <div className={`bg-gray-900 rounded-xl p-4 transition-all duration-200 border ${
-      isDone ? 'border-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.12)]' : 'border-gray-800 hover:border-gray-700'
+    <div className={`bg-white rounded-xl p-4 transition-all duration-200 border ${
+      isDone ? 'border-green-400 shadow-[0_4px_20px_rgba(22,163,74,0.15)]' : 'border-slate-200 hover:border-green-300'
     }`}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-[9px] font-bold text-gray-600 uppercase tracking-[0.15em]">Group</span>
-          <span className="text-2xl font-black text-white leading-none">{groupLetter}</span>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.15em]">Group</span>
+          <span className="text-2xl font-black text-slate-900 leading-none">{groupLetter}</span>
         </div>
         {isDone ? (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-900/40 px-2 py-0.5 rounded-full">
+          <span className="flex items-center gap-1 text-[10px] font-bold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
             <CheckIcon /> Done
           </span>
         ) : (
-          <span className="text-[10px] font-semibold text-gray-700">{selections.length}/2</span>
+          <span className="text-[10px] font-semibold text-slate-400">{selections.length}/2</span>
         )}
       </div>
 
@@ -50,7 +50,7 @@ function GroupCard({ groupLetter, teams, selections, aiRanking, loading, onToggl
       <div className="flex flex-col gap-1.5 mb-3">
         {teams.map((team) => {
           const rankIdx = selections.indexOf(team);
-          const rank = rankIdx + 1; // 1 or 2; 0 = unselected
+          const rank = rankIdx + 1;
           const aiPos = aiRanking ? aiRanking.indexOf(team) : -1;
           const isEliminated = isDone && rank === 0;
           const isAISuggested = !isDone && rank === 0 && aiPos >= 0 && aiPos < 2;
@@ -59,21 +59,21 @@ function GroupCard({ groupLetter, teams, selections, aiRanking, loading, onToggl
             <button
               key={team}
               onClick={() => !isEliminated && onToggle(groupLetter, team)}
-              className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+              className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:outline-none ${
                 rank === 1
-                  ? 'bg-emerald-600 text-white cursor-pointer'
+                  ? 'bg-green-600 text-white cursor-pointer'
                   : rank === 2
-                  ? 'bg-emerald-950/80 border border-emerald-800 text-emerald-300 cursor-pointer'
+                  ? 'bg-green-50 border border-green-300 text-green-700 cursor-pointer'
                   : isEliminated
-                  ? 'opacity-25 cursor-default text-gray-500'
-                  : 'bg-gray-800 hover:bg-gray-750 text-gray-200 cursor-pointer hover:border hover:border-gray-600'
+                  ? 'opacity-30 cursor-default text-slate-400'
+                  : 'bg-slate-50 hover:bg-green-50 text-slate-700 cursor-pointer hover:border hover:border-green-200'
               }`}
             >
               {/* Position circle */}
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 ${
-                rank === 1 ? 'bg-white text-emerald-700' :
-                rank === 2 ? 'bg-emerald-800 text-emerald-300' :
-                'bg-gray-700 text-gray-500'
+                rank === 1 ? 'bg-white text-green-700' :
+                rank === 2 ? 'bg-green-200 text-green-700' :
+                'bg-slate-200 text-slate-400'
               }`}>
                 {rank > 0 ? rank : loading ? '·' : aiPos >= 0 ? aiPos + 1 : '·'}
               </span>
@@ -92,7 +92,7 @@ function GroupCard({ groupLetter, teams, selections, aiRanking, loading, onToggl
       <button
         onClick={() => onUseAI(groupLetter)}
         disabled={loading || !aiRanking}
-        className="w-full flex items-center justify-center gap-1.5 text-[10px] font-bold text-amber-400 uppercase tracking-wider border border-amber-900/60 hover:bg-amber-900/20 rounded-lg py-1.5 transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
+        className="w-full flex items-center justify-center gap-1.5 text-[10px] font-bold text-amber-600 uppercase tracking-wider border border-amber-300 hover:bg-amber-50 rounded-lg py-1.5 transition-colors disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:outline-none"
       >
         <BoltIcon />
         {loading ? 'Loading…' : 'AI picks'}
@@ -106,15 +106,15 @@ function ThirdPlaceCard({ group, team, selected, disabled, onToggle }) {
   return (
     <button
       onClick={() => !disabled && onToggle(team)}
-      className={`px-3 py-3 rounded-xl border text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none ${
+      className={`px-3 py-3 rounded-xl border text-left transition-all duration-150 focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:outline-none ${
         selected
-          ? 'bg-emerald-700 border-emerald-500 text-white cursor-pointer shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+          ? 'bg-green-600 border-green-500 text-white cursor-pointer shadow-[0_4px_12px_rgba(22,163,74,0.25)]'
           : disabled
-          ? 'bg-gray-900 border-gray-800 text-gray-600 cursor-not-allowed opacity-40'
-          : 'bg-gray-900 border-gray-800 text-gray-300 hover:border-gray-600 hover:bg-gray-800 cursor-pointer'
+          ? 'bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed opacity-40'
+          : 'bg-white border-slate-200 text-slate-700 hover:border-green-300 hover:bg-green-50 cursor-pointer'
       }`}
     >
-      <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider mb-1">Group {group}</div>
+      <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Group {group}</div>
       <div className="text-xs font-semibold truncate">{team}</div>
     </button>
   );
@@ -229,18 +229,18 @@ export default function GroupStage() {
     <div className="max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-emerald-500 mb-1">
+        <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">
           FIFA World Cup 2026 · 48 Teams · 12 Groups
         </p>
-        <h1 className="text-3xl font-extrabold text-white mb-2">Group Stage Predictor</h1>
-        <p className="text-gray-400 text-sm max-w-xl">
+        <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Group Stage Predictor</h1>
+        <p className="text-slate-500 text-sm max-w-xl">
           Pick the top 2 finishers from each group. AI probabilities are generated by an XGBoost model trained on 49k international matches.
         </p>
       </div>
 
       {/* Model warm-up notice */}
       {warming && (
-        <div className="flex items-center gap-2 text-xs text-amber-400 bg-amber-900/20 border border-amber-900/40 rounded-xl px-4 py-2.5 mb-4">
+        <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 mb-4">
           <svg className="w-3.5 h-3.5 animate-spin shrink-0" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="2" strokeDasharray="28" strokeDashoffset="10"/>
           </svg>
@@ -249,17 +249,17 @@ export default function GroupStage() {
       )}
 
       {/* Progress bar + controls */}
-      <div className="flex flex-wrap items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-5 py-3 mb-6">
-        <div className="flex-1 min-w-36 h-2 bg-gray-800 rounded-full overflow-hidden">
+      <div className="flex flex-wrap items-center gap-3 bg-white border border-slate-200 rounded-xl px-5 py-3 mb-6 shadow-sm">
+        <div className="flex-1 min-w-36 h-2 bg-slate-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+            className="h-full bg-green-500 rounded-full transition-all duration-500"
             style={{ width: `${(completedCount / 12) * 100}%` }}
           />
         </div>
-        <span className="text-sm text-gray-400 whitespace-nowrap font-medium">{completedCount}/12 groups</span>
+        <span className="text-sm text-slate-500 whitespace-nowrap font-medium">{completedCount}/12 groups</span>
         <button
           onClick={useAllAI}
-          className="flex items-center gap-1.5 text-xs font-bold text-amber-400 border border-amber-800 hover:bg-amber-900/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 text-xs font-bold text-amber-600 border border-amber-300 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
         >
           <BoltIcon /> Auto-fill all with AI
         </button>
@@ -286,13 +286,13 @@ export default function GroupStage() {
         <div className="mb-8">
           <div className="flex items-end justify-between mb-4">
             <div>
-              <h2 className="text-xl font-bold text-white mb-0.5">Best Third-Place Teams</h2>
-              <p className="text-gray-500 text-sm">
-                Pick <span className="text-white font-semibold">8 of 12</span> third-place teams to advance to the Round of 32
+              <h2 className="text-xl font-bold text-slate-900 mb-0.5">Best Third-Place Teams</h2>
+              <p className="text-slate-500 text-sm">
+                Pick <span className="text-slate-900 font-semibold">8 of 12</span> third-place teams to advance to the Round of 32
               </p>
             </div>
             <span className={`text-sm font-bold px-3 py-1 rounded-lg ${
-              thirdSelected.length === 8 ? 'text-emerald-400 bg-emerald-900/30' : 'text-gray-400 bg-gray-800'
+              thirdSelected.length === 8 ? 'text-green-700 bg-green-100' : 'text-slate-500 bg-slate-100'
             }`}>
               {thirdSelected.length}/8
             </span>
@@ -316,21 +316,21 @@ export default function GroupStage() {
       {allGroupsDone && (
         <div className={`flex items-center gap-5 rounded-2xl px-6 py-5 border transition-all duration-300 ${
           canBuild
-            ? 'bg-emerald-900/20 border-emerald-700'
-            : 'bg-gray-900 border-gray-800'
+            ? 'bg-green-50 border-green-400 shadow-sm'
+            : 'bg-white border-slate-200'
         }`}>
           <div className="flex-1">
-            <div className={`font-bold mb-0.5 ${canBuild ? 'text-white' : 'text-gray-400'}`}>
+            <div className={`font-bold mb-0.5 ${canBuild ? 'text-slate-900' : 'text-slate-400'}`}>
               {canBuild ? 'Your 32 teams are set — build your bracket' : `Select ${8 - thirdSelected.length} more third-place team${8 - thirdSelected.length !== 1 ? 's' : ''}`}
             </div>
-            <div className="text-gray-600 text-sm">
+            <div className="text-slate-500 text-sm">
               {canBuild ? 'Round of 32 will be auto-populated from your group picks' : 'Complete all groups and 3rd-place selection to continue'}
             </div>
           </div>
           <button
             onClick={handleBuild}
             disabled={!canBuild}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-gray-800 disabled:text-gray-600 text-white font-bold px-6 py-3 rounded-xl transition-all duration-150 text-sm whitespace-nowrap cursor-pointer disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:outline-none"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold px-6 py-3 rounded-xl transition-all duration-150 text-sm whitespace-nowrap cursor-pointer disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:outline-none"
           >
             Build Bracket <ArrowRightIcon />
           </button>

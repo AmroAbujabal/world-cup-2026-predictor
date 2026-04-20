@@ -102,7 +102,7 @@ export default function Analysis() {
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <Link
-            to="/groups"
+            to="/"
             className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold px-6 py-2.5 rounded-xl transition-colors text-sm"
           >
             Compete against the model
@@ -245,7 +245,7 @@ export default function Analysis() {
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
-            to="/groups"
+            to="/"
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-8 py-3.5 rounded-xl transition-colors text-base"
           >
             Build my bracket

@@ -6,28 +6,32 @@ import Analysis from './pages/Analysis';
 
 function Nav() {
   const { pathname } = useLocation();
-  const isActive = (to) => pathname === to || (to === '/' && pathname === '/');
-  const link = (to, label) => (
+  const isCompete = pathname === '/' || pathname === '/groups' || pathname === '/bracket';
+  const link = (to, label, active) => (
     <Link
       to={to}
       className={`text-sm font-medium transition-colors ${
-        isActive(to) ? 'text-white' : 'text-gray-500 hover:text-gray-200'
+        active ? 'text-white font-semibold' : 'text-slate-400 hover:text-white'
       }`}
     >
       {label}
     </Link>
   );
   return (
-    <nav className="bg-gray-900/80 backdrop-blur border-b border-gray-800 px-6 py-4 flex items-center gap-8 sticky top-0 z-50">
-      <Link to="/" className="text-base font-extrabold text-emerald-400 hover:text-emerald-300 transition-colors tracking-tight">
+    <nav className="bg-slate-900 border-b border-slate-700 px-6 py-4 flex items-center gap-8 sticky top-0 z-50">
+      <Link to="/" className="text-base font-extrabold text-amber-400 hover:text-amber-300 transition-colors tracking-tight">
         WC 2026 Predictor
       </Link>
       <div className="flex items-center gap-6">
-        {link('/', 'Analysis')}
-        {link('/leaderboard', 'Leaderboard')}
+        {link('/analysis', 'Analysis', pathname === '/analysis')}
+        {link('/leaderboard', 'Leaderboard', pathname === '/leaderboard')}
         <Link
-          to="/groups"
-          className="text-sm font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded-lg transition-colors"
+          to="/"
+          className={`text-sm font-bold px-4 py-1.5 rounded-lg transition-colors ${
+            isCompete
+              ? 'bg-amber-400 text-slate-900'
+              : 'bg-amber-500 hover:bg-amber-400 text-slate-900'
+          }`}
         >
           Compete →
         </Link>
@@ -39,13 +43,14 @@ function Nav() {
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gray-950 text-white">
+      <div className="min-h-screen bg-amber-50 text-slate-900">
         <Nav />
         <main className="px-4 py-8">
           <Routes>
-            <Route path="/" element={<Analysis />} />
+            <Route path="/" element={<GroupStage />} />
             <Route path="/groups" element={<GroupStage />} />
             <Route path="/bracket" element={<BracketChallenge />} />
+            <Route path="/analysis" element={<Analysis />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
           </Routes>
         </main>

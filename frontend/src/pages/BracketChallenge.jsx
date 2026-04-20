@@ -1,6 +1,6 @@
 // frontend/src/pages/BracketChallenge.jsx
 import { useEffect, useState, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import MatchupCard from '../components/MatchupCard';
 import { predictMatch, submitUserPrediction } from '../api/client';
 import { buildR32 } from '../data/wc2026';
@@ -275,10 +275,35 @@ export default function BracketChallenge() {
             {submitting ? 'Submitting…' : 'Submit Bracket'}
           </button>
         ) : (
-          <span className="text-green-600 font-semibold text-sm">Bracket submitted!</span>
+          <div className="flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-100 border border-green-300 px-3 py-2 rounded-xl">
+            <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none">
+              <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Bracket locked in as <span className="font-bold">{username}</span>
+          </div>
         )}
         {submitMsg && <span className="text-red-500 text-sm">{submitMsg}</span>}
       </div>
+
+      {/* Submitted confirmation banner */}
+      {submitted && (
+        <div className="max-w-5xl mx-auto mb-6 bg-green-50 border border-green-300 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-bold text-green-800 mb-0.5">Your bracket is submitted!</p>
+            <p className="text-xs text-green-700">
+              Predictions are locked in as <span className="font-semibold">{username}</span>.
+              {champion && <> Your champion pick: <span className="font-semibold">{champion}</span>.</>}
+              {' '}Scoring begins when matches are played in June 2026.
+            </p>
+          </div>
+          <Link
+            to="/leaderboard"
+            className="text-xs font-bold text-green-700 border border-green-400 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+          >
+            View leaderboard →
+          </Link>
+        </div>
+      )}
 
       {/* Bracket — horizontally scrollable */}
       <div className="overflow-x-auto pb-8">

@@ -3,6 +3,7 @@ import GroupStage from './pages/GroupStage';
 import BracketChallenge from './pages/BracketChallenge';
 import Leaderboard from './pages/Leaderboard';
 import Analysis from './pages/Analysis';
+import NotFound from './pages/NotFound';
 
 function Nav() {
   const { pathname } = useLocation();
@@ -52,6 +53,7 @@ export default function App() {
             <Route path="/bracket" element={<BracketChallenge />} />
             <Route path="/analysis" element={<Analysis />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
       </div>

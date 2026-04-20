@@ -15,10 +15,11 @@ Match IDs:
 Example — Spain beat Egypt 2-0 (match 8):
   python scripts/score_result.py 8 2 0
 """
+import os
 import sys
 import requests
 
-API = "https://world-cup-2026-predictor-production.up.railway.app"
+API = os.getenv("API_URL", "https://world-cup-2026-predictor-production.up.railway.app")
 
 if len(sys.argv) != 4:
     print(__doc__)

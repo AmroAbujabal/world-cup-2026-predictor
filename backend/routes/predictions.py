@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from backend.db.database import get_db
 from backend.db.models import User, UserPrediction, Match
 from backend.model.predict import PredictorService
-from backend.schemas import PredictRequest, PredictResponse, UserPredictRequest, UserPredictResponse
+from backend.schemas import PredictRequest, PredictResponse, UserPredictRequest, UserPredictResponse, MatchResponse
 
 router = APIRouter()
 
@@ -121,6 +121,33 @@ def bracket_predictions():
 
     champion = rounds[-1]["matchups"][0]["predicted_winner"] if rounds else None
     return {"rounds": rounds, "champion": champion}
+
+
+def _stage_label(match_id: int) -> str:
+    if match_id <= 16: return "R32"
+    if match_id <= 24: return "R16"
+    if match_id <= 28: return "QF"
+    if match_id <= 30: return "SF"
+    return "Final"
+
+
+@router.get("/matches", response_model=list[MatchResponse])
+def get_matches(db: Session = Depends(get_db)):
+    """Return all knockout fixtures with current status and scores."""
+    matches = db.query(Match).order_by(Match.id).all()
+    return [
+        MatchResponse(
+            id=m.id,
+            home_team=m.home_team,
+            away_team=m.away_team,
+            match_date=m.match_date.isoformat(),
+            stage=_stage_label(m.id),
+            status=m.status or "upcoming",
+            home_score=m.home_score,
+            away_score=m.away_score,
+        )
+        for m in matches
+    ]
 
 
 @router.post("/user/predict", response_model=UserPredictResponse)

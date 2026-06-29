@@ -13,4 +13,6 @@ export const submitUserPrediction = (username, matchId, predictedOutcome) =>
 
 export const getLeaderboard = () => api.get('/leaderboard');
 
+export const getMatches = () => api.get('/matches');
+
 export default api;

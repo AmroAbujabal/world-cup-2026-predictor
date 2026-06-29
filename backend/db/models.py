@@ -19,6 +19,8 @@ class Match(Base):
     home_score = Column(Integer, nullable=True)
     away_score = Column(Integer, nullable=True)
     is_locked = Column(Boolean, default=False)
+    status = Column(String, default="upcoming")   # upcoming | live | final
+    external_id = Column(Integer, nullable=True)  # football-data.org match ID
 
     predictions = relationship("UserPrediction", back_populates="match")
 

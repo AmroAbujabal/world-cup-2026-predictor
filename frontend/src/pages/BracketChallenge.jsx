@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import MatchupCard from '../components/MatchupCard';
-import { predictMatch, submitUserPrediction, getMatches } from '../api/client';
+import api, { predictMatch, submitUserPrediction, getMatches } from '../api/client';
 import { buildR32 } from '../data/wc2026';
 
 // FIFA World Cup 2026 — Actual Round of 32 fixtures (group stage complete Jun 27 2026)
@@ -126,36 +126,42 @@ export default function BracketChallenge() {
   const [picks, setPicks] = useState({});
   const [loadingProbs, setLoadingProbs] = useState({});
 
-  // Overlay live match data (status + scores) from the backend
-  useEffect(() => {
-    getMatches().then(({ data }) => {
-      // data is an array of { id, home_team, away_team, status, home_score, away_score }
-      // DB IDs 1–16 map to r32_1…r32_16
-      const bySlot = {};
-      data.forEach(m => {
-        if (m.id >= 1 && m.id <= 16) bySlot[`r32_${m.id}`] = m;
+  const [r16Predictions, setR16Predictions] = useState(null);
+
+  // Overlay live match data (status + scores) — polls every 60s
+  const applyLiveData = useCallback((data) => {
+    const bySlot = {};
+    data.forEach(m => {
+      if (m.id >= 1 && m.id <= 16) bySlot[`r32_${m.id}`] = m;
+    });
+    setBracket(prev => prev.map((round, ri) => {
+      if (ri !== 0) return round;
+      return round.map(matchup => {
+        const live = bySlot[matchup.id];
+        if (!live) return matchup;
+        const updated = { ...matchup, status: live.status, homeScore: live.home_score, awayScore: live.away_score };
+        if (live.home_team && !live.home_team.includes('TBD')) {
+          updated.team1 = live.home_team;
+          updated.team2 = live.away_team;
+        }
+        return updated;
       });
-      setBracket(prev => prev.map((round, ri) => {
-        if (ri !== 0) return round; // only update R32 round
-        return round.map(matchup => {
-          const live = bySlot[matchup.id];
-          if (!live) return matchup;
-          const updated = {
-            ...matchup,
-            status: live.status,
-            homeScore: live.home_score,
-            awayScore: live.away_score,
-          };
-          // If the DB has real teams and the current slot still shows INITIAL_R32 placeholders,
-          // update to actual teams
-          if (live.home_team && !live.home_team.includes('TBD')) {
-            updated.team1 = live.home_team;
-            updated.team2 = live.away_team;
-          }
-          return updated;
-        });
-      }));
-    }).catch(() => { /* backend may not have live data yet */ });
+    }));
+  }, []);
+
+  useEffect(() => {
+    getMatches().then(({ data }) => applyLiveData(data)).catch(() => {});
+    const timer = setInterval(() => {
+      getMatches().then(({ data }) => applyLiveData(data)).catch(() => {});
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [applyLiveData]);
+
+  // Fetch AI bracket simulation (R16 predictions)
+  useEffect(() => {
+    api.get('/bracket-predictions').then(({ data }) => {
+      setR16Predictions(data.rounds?.[1]?.matchups || null); // index 1 = R16
+    }).catch(() => {});
   }, []);
 
   const fetchProbs = useCallback(async (matchupId, team1, team2) => {
@@ -163,10 +169,14 @@ export default function BracketChallenge() {
     setLoadingProbs(p => ({ ...p, [matchupId]: true }));
     try {
       const { data } = await predictMatch(team1, team2, true);
+      // Knockout rounds have no draws — redistribute draw probability proportionally
+      const base = data.prob_home_win + data.prob_away_win;
+      const prob1 = base > 0 ? data.prob_home_win / base : 0.5;
+      const prob2 = base > 0 ? data.prob_away_win / base : 0.5;
       setBracket(prev => prev.map(round =>
         round.map(m =>
           m.id === matchupId
-            ? { ...m, prob1: data.prob_home_win, prob2: data.prob_away_win }
+            ? { ...m, prob1, prob2 }
             : m
         )
       ));
@@ -258,12 +268,35 @@ export default function BracketChallenge() {
     <div className="max-w-none">
       {/* Page title */}
       <div className="max-w-5xl mx-auto mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">FIFA World Cup 2026</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">FIFA World Cup 2026 · Live</p>
         <h1 className="text-3xl font-extrabold text-slate-900 mb-1">AI Bracket Challenge</h1>
         <p className="text-slate-500 text-sm">
-          Pick the winner of every knockout match — from Round of 32 to the Final. AI win probabilities powered by XGBoost trained on 49k historical matches.
+          Pick the winner of every knockout match — from Round of 32 to the Final. Probabilities update with real results. Live scores refresh every 60s.
         </p>
       </div>
+
+      {/* R16 AI Predictions panel */}
+      {r16Predictions && (
+        <div className="max-w-5xl mx-auto mb-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-600 mb-1">AI Simulation</p>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">Predicted Round of 16</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {r16Predictions.map((m, i) => (
+              <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden text-sm">
+                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
+                  <span className={`font-medium truncate ${m.predicted_winner === m.team1 ? 'text-green-700 font-bold' : 'text-slate-500'}`}>{m.team1}</span>
+                  <span className="text-xs text-slate-400 shrink-0 ml-1">{Math.round(m.prob1 * 100)}%</span>
+                </div>
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className={`font-medium truncate ${m.predicted_winner === m.team2 ? 'text-green-700 font-bold' : 'text-slate-500'}`}>{m.team2}</span>
+                  <span className="text-xs text-slate-400 shrink-0 ml-1">{Math.round(m.prob2 * 100)}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 mt-3">Predicted winners in bold green — based on who AI expects to win each R32 match.</p>
+        </div>
+      )}
 
       {/* Model explanation banner */}
       <div className="max-w-5xl mx-auto">

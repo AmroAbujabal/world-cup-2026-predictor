@@ -31,40 +31,32 @@ def predict(request: PredictRequest):
     )
 
 
-# Predicted R32 based on the official 2026 WC draw (December 2024)
-# Pairings follow FIFA format: 1A vs 2B, 1B vs 2A, 1C vs 2D, ... 1K vs 2L, 1L vs 2K
-# Final 4 matches use 8 best 3rd-place qualifiers (most likely candidates shown)
+# Actual R32 fixtures — group stage complete Jun 27 2026
+# Known results: Match 1 South Africa 0-1 Canada, Match 2 Brazil 2-1 Japan
 BRACKET_R32 = [
-    # Group A winner vs Group B runner-up
-    ("Mexico",      "Canada"),
-    # Group B winner vs Group A runner-up
-    ("Switzerland", "South Korea"),
-    # Group C winner vs Group D runner-up
-    ("Brazil",      "Turkey"),
-    # Group D winner vs Group C runner-up
-    ("United States", "Morocco"),
-    # Group E winner vs Group F runner-up
-    ("Germany",     "Japan"),
-    # Group F winner vs Group E runner-up
-    ("Netherlands", "Ecuador"),
-    # Group G winner vs Group H runner-up
-    ("Belgium",     "Uruguay"),
-    # Group H winner vs Group G runner-up
-    ("Spain",       "Egypt"),
-    # Group I winner vs Group J runner-up
-    ("France",      "Austria"),
-    # Group J winner vs Group I runner-up
-    ("Argentina",   "Senegal"),
-    # Group K winner vs Group L runner-up
-    ("Portugal",    "Croatia"),
-    # Group L winner vs Group K runner-up
-    ("England",     "Colombia"),
-    # Best 3rd-place matches
-    ("South Africa",           "Bosnia and Herzegovina"),
-    ("Scotland",               "Paraguay"),
-    ("Ivory Coast",            "Sweden"),
-    ("Iran",                   "Norway"),
+    ("South Africa",          "Canada"),
+    ("Brazil",                "Japan"),
+    ("Germany",               "Paraguay"),
+    ("Netherlands",           "Morocco"),
+    ("Ivory Coast",           "Norway"),
+    ("France",                "Sweden"),
+    ("Mexico",                "Ecuador"),
+    ("England",               "DR Congo"),
+    ("Belgium",               "Senegal"),
+    ("USA",                   "Bosnia and Herzegovina"),
+    ("Spain",                 "Austria"),
+    ("Portugal",              "Croatia"),
+    ("Switzerland",           "Algeria"),
+    ("Australia",             "Egypt"),
+    ("Argentina",             "Cape Verde"),
+    ("Colombia",              "Ghana"),
 ]
+
+# Known R32 results — used to override model simulation for completed matches
+R32_RESULTS = {
+    0: "Canada",        # South Africa 0-1 Canada
+    1: "Brazil",        # Brazil 2-1 Japan
+}
 
 
 @router.post("/group-standings")
@@ -97,23 +89,39 @@ def bracket_predictions():
     """Run the AI model through all knockout rounds and return the full predicted bracket."""
     predictor = get_predictor()
 
-    def predict_winner(team1, team2):
+    def predict_winner(team1, team2, known_winner=None):
+        if known_winner:
+            # Use real result — redistribute draw prob for display consistency
+            p = predictor.predict(team1, team2, neutral=True)
+            base = p.prob_home_win + p.prob_away_win
+            prob1 = round(p.prob_home_win / base, 3) if base > 0 else 0.5
+            prob2 = round(p.prob_away_win / base, 3) if base > 0 else 0.5
+            return {
+                "team1": team1, "team2": team2,
+                "prob1": prob1, "prob2": prob2,
+                "predicted_winner": known_winner,
+                "actual_winner": known_winner,
+            }
         p = predictor.predict(team1, team2, neutral=True)
-        winner = team1 if p.prob_home_win >= p.prob_away_win else team2
+        base = p.prob_home_win + p.prob_away_win
+        prob1 = round(p.prob_home_win / base, 3) if base > 0 else 0.5
+        prob2 = round(p.prob_away_win / base, 3) if base > 0 else 0.5
+        winner = team1 if prob1 >= prob2 else team2
         return {
             "team1": team1, "team2": team2,
-            "prob1": round(p.prob_home_win, 3),
-            "prob_draw": round(p.prob_draw, 3),
-            "prob2": round(p.prob_away_win, 3),
+            "prob1": prob1, "prob2": prob2,
             "predicted_winner": winner,
         }
 
     rounds = []
     round_names = ["Round of 32", "Round of 16", "Quarter-finals", "Semi-finals", "Final"]
 
-    pairs = BRACKET_R32
-    for round_name in round_names:
-        matchups = [predict_winner(a, b) for a, b in pairs]
+    pairs = list(BRACKET_R32)
+    for round_idx, round_name in enumerate(round_names):
+        matchups = []
+        for match_idx, (a, b) in enumerate(pairs):
+            known = R32_RESULTS.get(match_idx) if round_idx == 0 else None
+            matchups.append(predict_winner(a, b, known_winner=known))
         rounds.append({"round": round_name, "matchups": matchups})
         winners = [m["predicted_winner"] for m in matchups]
         if len(winners) > 1:

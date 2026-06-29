@@ -1,5 +1,4 @@
-import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
-import GroupStage from './pages/GroupStage';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import BracketChallenge from './pages/BracketChallenge';
 import Leaderboard from './pages/Leaderboard';
 import Analysis from './pages/Analysis';
@@ -7,7 +6,6 @@ import NotFound from './pages/NotFound';
 
 function Nav() {
   const { pathname } = useLocation();
-  const isCompete = pathname === '/' || pathname === '/groups' || pathname === '/bracket';
   const link = (to, label, active) => (
     <Link
       to={to}
@@ -29,12 +27,12 @@ function Nav() {
         <Link
           to="/"
           className={`text-sm font-bold px-4 py-1.5 rounded-lg transition-colors ${
-            isCompete
+            pathname === '/' || pathname === '/bracket'
               ? 'bg-amber-400 text-slate-900'
               : 'bg-amber-500 hover:bg-amber-400 text-slate-900'
           }`}
         >
-          Compete →
+          Live Bracket →
         </Link>
       </div>
     </nav>
@@ -48,9 +46,9 @@ export default function App() {
         <Nav />
         <main className="px-4 py-8">
           <Routes>
-            <Route path="/" element={<GroupStage />} />
-            <Route path="/groups" element={<GroupStage />} />
-            <Route path="/bracket" element={<BracketChallenge />} />
+            <Route path="/" element={<BracketChallenge />} />
+            <Route path="/bracket" element={<Navigate to="/" replace />} />
+            <Route path="/groups" element={<Navigate to="/" replace />} />
             <Route path="/analysis" element={<Analysis />} />
             <Route path="/leaderboard" element={<Leaderboard />} />
             <Route path="*" element={<NotFound />} />

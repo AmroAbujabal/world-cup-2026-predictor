@@ -5,41 +5,62 @@ import MatchupCard from '../components/MatchupCard';
 import api, { predictMatch, submitUserPrediction, getMatches } from '../api/client';
 import { buildR32 } from '../data/wc2026';
 
-// FIFA World Cup 2026 — Actual Round of 32 fixtures (group stage complete Jun 27 2026)
+// Official WC 2026 bracket — ordered so R16 pairs are correct
+// R16: (1v2) (3v4) (5v6) (7v8) (9v10) (11v12) (13v14) (15v16)
+// → Germany/France · Canada/Netherlands · Brazil/Norway · Mexico/England
+// → Portugal/Spain · USA/Belgium-Senegal · Argentina/Egypt · Switzerland/Colombia
 const INITIAL_R32 = [
-  { id: 'r32_1',  team1: 'South Africa',          team2: 'Canada' },
-  { id: 'r32_2',  team1: 'Brazil',                team2: 'Japan' },
-  { id: 'r32_3',  team1: 'Germany',               team2: 'Paraguay' },
-  { id: 'r32_4',  team1: 'Netherlands',           team2: 'Morocco' },
-  { id: 'r32_5',  team1: 'Ivory Coast',           team2: 'Norway' },
-  { id: 'r32_6',  team1: 'France',                team2: 'Sweden' },
-  { id: 'r32_7',  team1: 'Mexico',                team2: 'Ecuador' },
-  { id: 'r32_8',  team1: 'England',               team2: 'DR Congo' },
-  { id: 'r32_9',  team1: 'Belgium',               team2: 'Senegal' },
-  { id: 'r32_10', team1: 'USA',                   team2: 'Bosnia and Herzegovina' },
-  { id: 'r32_11', team1: 'Spain',                 team2: 'Austria' },
-  { id: 'r32_12', team1: 'Portugal',              team2: 'Croatia' },
-  { id: 'r32_13', team1: 'Switzerland',           team2: 'Algeria' },
-  { id: 'r32_14', team1: 'Australia',             team2: 'Egypt' },
-  { id: 'r32_15', team1: 'Argentina',             team2: 'Cape Verde' },
-  { id: 'r32_16', team1: 'Colombia',              team2: 'Ghana' },
+  { id: 'r32_1',  team1: 'Germany',               team2: 'Paraguay' },           // → R16 vs France winner
+  { id: 'r32_2',  team1: 'France',                team2: 'Sweden' },             // → R16 vs Germany winner
+  { id: 'r32_3',  team1: 'South Africa',          team2: 'Canada' },             // → R16 vs Netherlands winner
+  { id: 'r32_4',  team1: 'Netherlands',           team2: 'Morocco' },            // → R16 vs Canada
+  { id: 'r32_5',  team1: 'Brazil',                team2: 'Japan' },              // → R16 vs Norway winner
+  { id: 'r32_6',  team1: 'Ivory Coast',           team2: 'Norway' },             // → R16 vs Brazil
+  { id: 'r32_7',  team1: 'Mexico',                team2: 'Ecuador' },            // → R16 vs England winner
+  { id: 'r32_8',  team1: 'England',               team2: 'DR Congo' },           // → R16 vs Mexico winner
+  { id: 'r32_9',  team1: 'Portugal',              team2: 'Croatia' },            // → R16 vs Spain winner
+  { id: 'r32_10', team1: 'Spain',                 team2: 'Austria' },            // → R16 vs Portugal winner
+  { id: 'r32_11', team1: 'Belgium',               team2: 'Senegal' },            // → R16 vs USA winner
+  { id: 'r32_12', team1: 'USA',                   team2: 'Bosnia and Herzegovina' }, // → R16 vs Belgium/Senegal
+  { id: 'r32_13', team1: 'Argentina',             team2: 'Cape Verde' },         // → R16 vs Egypt winner
+  { id: 'r32_14', team1: 'Australia',             team2: 'Egypt' },              // → R16 vs Argentina
+  { id: 'r32_15', team1: 'Switzerland',           team2: 'Algeria' },            // → R16 vs Colombia winner
+  { id: 'r32_16', team1: 'Colombia',              team2: 'Ghana' },              // → R16 vs Switzerland
 ];
 
 const ROUNDS = ['Round of 32', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
 const TOTAL_MATCHUPS = 16 + 8 + 4 + 2 + 1; // 31
 
-// Stable mapping from matchup ID → DB match ID (seeded in order on the backend)
+// Bracket slot → DB match ID
+// R32 DB IDs are sorted by date; bracket order follows official R16 path structure
 const MATCH_ID_MAP = {
-  r32_1: 1,  r32_2: 2,  r32_3: 3,  r32_4: 4,
-  r32_5: 5,  r32_6: 6,  r32_7: 7,  r32_8: 8,
-  r32_9: 9,  r32_10: 10, r32_11: 11, r32_12: 12,
-  r32_13: 13, r32_14: 14, r32_15: 15, r32_16: 16,
+  r32_1:  3,  // Germany vs Paraguay
+  r32_2:  6,  // France vs Sweden
+  r32_3:  1,  // South Africa vs Canada
+  r32_4:  4,  // Netherlands vs Morocco
+  r32_5:  2,  // Brazil vs Japan
+  r32_6:  5,  // Ivory Coast vs Norway
+  r32_7:  7,  // Mexico vs Ecuador
+  r32_8:  8,  // England vs DR Congo
+  r32_9:  12, // Portugal vs Croatia
+  r32_10: 11, // Spain vs Austria
+  r32_11: 9,  // Belgium vs Senegal
+  r32_12: 10, // USA vs Bosnia
+  r32_13: 15, // Argentina vs Cape Verde
+  r32_14: 14, // Australia vs Egypt
+  r32_15: 13, // Switzerland vs Algeria
+  r32_16: 16, // Colombia vs Ghana
   r16_1: 17, r16_2: 18, r16_3: 19, r16_4: 20,
   r16_5: 21, r16_6: 22, r16_7: 23, r16_8: 24,
   qf_1: 25, qf_2: 26, qf_3: 27, qf_4: 28,
   sf_1: 29, sf_2: 30,
   f_1: 31,
 };
+
+// Reverse map: DB match ID → bracket slot (for live data overlay)
+const DB_ID_TO_SLOT = Object.fromEntries(
+  Object.entries(MATCH_ID_MAP).map(([slot, id]) => [id, slot])
+);
 
 // card height + gap ≈ 82px — used to compute vertical bracket spacing
 const CELL = 82;
@@ -132,7 +153,8 @@ export default function BracketChallenge() {
   const applyLiveData = useCallback((data) => {
     const bySlot = {};
     data.forEach(m => {
-      if (m.id >= 1 && m.id <= 16) bySlot[`r32_${m.id}`] = m;
+      const slot = DB_ID_TO_SLOT[m.id];
+      if (slot) bySlot[slot] = m;
     });
     setBracket(prev => prev.map((round, ri) => {
       if (ri !== 0) return round;

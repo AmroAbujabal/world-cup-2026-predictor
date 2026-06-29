@@ -31,31 +31,40 @@ def predict(request: PredictRequest):
     )
 
 
-# Actual R32 fixtures — group stage complete Jun 27 2026
-# Known results: Match 1 South Africa 0-1 Canada, Match 2 Brazil 2-1 Japan
+# Official WC 2026 bracket — ordered so sequential R16 pairings are correct
+# R16 pairs: (0,1) (2,3) (4,5) (6,7) (8,9) (10,11) (12,13) (14,15)
+# Source: confirmed R16 schedule (Jul 4–7 2026)
+#   0v1 → Germany vs France        (Jul 4, Philadelphia)
+#   2v3 → Canada vs Netherlands    (Jul 4, Houston)
+#   4v5 → Brazil vs Norway         (Jul 5, East Rutherford)
+#   6v7 → Mexico vs England        (Jul 5, Mexico City)
+#   8v9 → Portugal vs Spain        (Jul 6, Arlington)
+#  10v11→ USA vs Senegal           (Jul 6, Seattle)
+#  12v13→ Argentina vs Egypt       (Jul 7, Atlanta)
+#  14v15→ Switzerland vs Colombia  (Jul 7, Vancouver)
 BRACKET_R32 = [
-    ("South Africa",          "Canada"),
-    ("Brazil",                "Japan"),
-    ("Germany",               "Paraguay"),
-    ("Netherlands",           "Morocco"),
-    ("Ivory Coast",           "Norway"),
-    ("France",                "Sweden"),
-    ("Mexico",                "Ecuador"),
-    ("England",               "DR Congo"),
-    ("Belgium",               "Senegal"),
-    ("USA",                   "Bosnia and Herzegovina"),
-    ("Spain",                 "Austria"),
-    ("Portugal",              "Croatia"),
-    ("Switzerland",           "Algeria"),
-    ("Australia",             "Egypt"),
-    ("Argentina",             "Cape Verde"),
-    ("Colombia",              "Ghana"),
+    ("Germany",               "Paraguay"),           # 0  → R16 vs France winner     (DB id 3)
+    ("France",                "Sweden"),             # 1  → R16 vs Germany winner    (DB id 6)
+    ("South Africa",          "Canada"),             # 2  → R16 vs Netherlands win.  (DB id 1)
+    ("Netherlands",           "Morocco"),            # 3  → R16 vs Canada            (DB id 4)
+    ("Brazil",                "Japan"),              # 4  → R16 vs Norway winner     (DB id 2)
+    ("Ivory Coast",           "Norway"),             # 5  → R16 vs Brazil            (DB id 5)
+    ("Mexico",                "Ecuador"),            # 6  → R16 vs England winner    (DB id 7)
+    ("England",               "DR Congo"),           # 7  → R16 vs Mexico winner     (DB id 8)
+    ("Portugal",              "Croatia"),            # 8  → R16 vs Spain winner      (DB id 12)
+    ("Spain",                 "Austria"),            # 9  → R16 vs Portugal winner   (DB id 11)
+    ("Belgium",               "Senegal"),            # 10 → R16 vs USA winner        (DB id 9)
+    ("USA",                   "Bosnia and Herzegovina"), # 11 → R16 vs Belgium/Sen.  (DB id 10)
+    ("Argentina",             "Cape Verde"),         # 12 → R16 vs Egypt winner      (DB id 15)
+    ("Australia",             "Egypt"),              # 13 → R16 vs Argentina         (DB id 14)
+    ("Switzerland",           "Algeria"),            # 14 → R16 vs Colombia winner   (DB id 13)
+    ("Colombia",              "Ghana"),              # 15 → R16 vs Switzerland       (DB id 16)
 ]
 
-# Known R32 results — used to override model simulation for completed matches
+# Known R32 results — bracket index → actual winner
 R32_RESULTS = {
-    0: "Canada",        # South Africa 0-1 Canada
-    1: "Brazil",        # Brazil 2-1 Japan
+    2: "Canada",   # South Africa 0-1 Canada  (bracket idx 2)
+    4: "Brazil",   # Brazil 2-1 Japan          (bracket idx 4)
 }
 
 

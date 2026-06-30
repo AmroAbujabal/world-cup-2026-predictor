@@ -5,17 +5,15 @@ import axios from 'axios';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-function ProbBar({ p1, pd, p2 }) {
+function ProbBar({ p1, p2 }) {
   return (
     <div className="flex flex-col gap-1 w-56 shrink-0">
       <div className="flex w-full h-2.5 rounded-full overflow-hidden gap-px">
         <div className="bg-green-500 transition-all" style={{ width: `${p1}%` }} />
-        <div className="bg-slate-300 transition-all" style={{ width: `${pd}%` }} />
         <div className="bg-sky-500 transition-all" style={{ width: `${p2}%` }} />
       </div>
       <div className="flex w-full justify-between text-xs text-slate-500 font-medium">
         <span>{p1}%</span>
-        <span className="text-slate-400">{pd}% draw</span>
         <span>{p2}%</span>
       </div>
     </div>
@@ -24,7 +22,6 @@ function ProbBar({ p1, pd, p2 }) {
 
 function MatchupRow({ matchup }) {
   const p1 = Math.round(matchup.prob1 * 100);
-  const pd = Math.round(matchup.prob_draw * 100);
   const p2 = Math.round(matchup.prob2 * 100);
   const w1 = matchup.predicted_winner === matchup.team1;
   return (
@@ -33,7 +30,7 @@ function MatchupRow({ matchup }) {
         {matchup.team1}
         {w1 && <span className="ml-1.5 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-normal">wins</span>}
       </div>
-      <ProbBar p1={p1} pd={pd} p2={p2} />
+      <ProbBar p1={p1} p2={p2} />
       <div className={`w-36 text-sm font-semibold ${!w1 ? 'text-green-700' : 'text-slate-400'}`}>
         {!w1 && <span className="mr-1.5 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-normal">wins</span>}
         {matchup.team2}
@@ -128,7 +125,7 @@ export default function Analysis() {
 
       {/* Header */}
       <div className="mb-12">
-        <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-3">Engineering Write-up · April 2026</p>
+        <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-3">Engineering Write-up · June 2026</p>
         <h1 className="text-4xl font-extrabold text-slate-900 leading-snug mb-4 mt-1">
           Predicting the 2026 FIFA World Cup with Machine Learning
         </h1>
@@ -148,20 +145,20 @@ export default function Analysis() {
           </a>
         </p>
         <p className="text-slate-600 text-base leading-relaxed">
-          A full-stack ML application: an XGBoost classifier trained on 49,287 international matches predicts World Cup outcomes, served via a FastAPI backend, with an interactive React frontend that lets users build brackets and compete on a live leaderboard.
+          A full-stack ML application: an XGBoost classifier trained on 49,287 international matches (plus all 72 WC 2026 group stage results) predicts World Cup outcomes, served via a FastAPI backend, with an interactive React frontend showing the live bracket and a real-time leaderboard.
         </p>
         <div className="mt-6 flex flex-wrap items-center gap-4">
           <Link
             to="/"
             className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold px-6 py-2.5 rounded-xl transition-colors text-sm"
           >
-            Compete against the model
+            See the live bracket
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </Link>
           <div className="flex gap-2 flex-wrap">
-            {['XGBoost', 'FastAPI', 'React 18', 'PostgreSQL', 'Railway', 'Vercel'].map(tag => (
+            {['XGBoost', 'FastAPI', 'React 18', 'SQLite', 'Railway', 'Vercel'].map(tag => (
               <span key={tag} className="text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 px-3 py-1 rounded-full">{tag}</span>
             ))}
           </div>
@@ -317,21 +314,21 @@ export default function Analysis() {
           {[
             {
               step: '01',
-              title: 'Group Stage Picker',
-              desc: "Users pick the top 2 finishers from each of the 12 groups, then select 8 of 12 best third-place teams to fill the Round of 32. An AI suggestions feature runs the model's round-robin simulation for all 4 teams in a group and ranks them by predicted points — powered by a live /group-standings API call. All 12 groups warm up concurrently (staggered 200ms) on page load so probabilities are ready when users get to them.",
-              tags: ['12 groups', '48 teams', 'AI suggestions', 'localStorage'],
+              title: 'Live Bracket',
+              desc: "The landing page is the official FIFA WC 2026 knockout bracket — Round of 32 through the Final. Live scores and match status (LIVE / FT) are fetched from the backend and overlaid on every card, auto-refreshing every 60 seconds. The AI's win probabilities (renormalized to exclude draws for knockout rounds) are shown on each matchup, and completed results lock in the bracket automatically.",
+              tags: ['32 teams', 'live scores', '60s auto-refresh', 'official bracket'],
             },
             {
               step: '02',
-              title: 'Bracket Challenge',
-              desc: 'A horizontally-scrollable interactive bracket spanning Round of 32 through the Final. Picking a winner cascades forward: the bracket auto-populates the next round slot, clears downstream picks (since the matchup changes), and fires a new /predict API call to fetch win probabilities for the newly-formed matchup — all in the same state update cycle. Submitted brackets are stored in PostgreSQL and survive across redeploys.',
-              tags: ['31 matches', 'live probabilities', 'cascade picks', 'PostgreSQL'],
+              title: 'AI Bracket Predictions',
+              desc: "The model simulates all 5 knockout rounds sequentially — advancing whichever team has the higher win probability at each matchup. Knockout probabilities are renormalized by redistributing draw probability proportionally to home and away, reflecting that knockout matches must produce a winner. Completed R32 results are injected as known outcomes so the bracket always reflects real progress.",
+              tags: ['5 rounds', 'renormalized probs', 'real results injected', 'live updates'],
             },
             {
               step: '03',
               title: 'Live Leaderboard',
-              desc: "Submitted brackets appear on a live leaderboard ranked by total points. Before the tournament the leaderboard shows 'Submitted' status for all entrants. Once matches are played, results are fed via an admin endpoint that scores every prediction for that match and updates user point totals — no manual recalculation required.",
-              tags: ['real-time scoring', 'upsert predictions', 'ranked entries'],
+              desc: "Submitted brackets appear on a live leaderboard ranked by total prediction points. Results are fed via an admin endpoint (or auto-polled from football-data.org every 5 minutes) that scores every prediction for that match and updates user point totals in real time — no manual recalculation required. The backend poller runs during the tournament window (Jun 28–Jul 19 2026).",
+              tags: ['auto-scoring', 'football-data.org polling', '5-min updates', 'ranked entries'],
             },
           ].map(f => (
             <div key={f.step} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex gap-5">
@@ -397,7 +394,7 @@ export default function Analysis() {
             Think you can beat the model?
           </h2>
           <p className="text-slate-600 text-base max-w-lg mx-auto leading-relaxed">
-            The model has made its picks. Now build your own bracket — choose your group stage winners, pick your third-place qualifiers, and call every knockout match. See who gets it right when the tournament kicks off.
+            The model has made its picks. Follow the live bracket, submit your own predictions for remaining matches, and see how you stack up as results come in.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -405,7 +402,7 @@ export default function Analysis() {
             to="/"
             className="flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold px-8 py-3.5 rounded-xl transition-colors text-base"
           >
-            Build my bracket
+            View live bracket
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
@@ -419,8 +416,8 @@ export default function Analysis() {
         </div>
         <div className="mt-8 grid grid-cols-3 gap-4 text-center border-t border-green-200 pt-8">
           {[
-            { n: '48', label: 'Teams', sub: '12 groups' },
-            { n: '31', label: 'Matches to pick', sub: 'R32 → Final' },
+            { n: '32', label: 'Teams remaining', sub: 'R32 underway' },
+            { n: '29', label: 'Matches to go', sub: 'R32 → Final' },
             { n: '39.8%', label: 'Model accuracy', sub: 'vs 33.3% baseline' },
           ].map(s => (
             <div key={s.label}>

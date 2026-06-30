@@ -22,12 +22,12 @@ export default function Leaderboard() {
       <h1 className="text-3xl font-bold mb-1 text-slate-900">Leaderboard</h1>
       <p className="text-slate-500 mb-6 text-sm">Ranked by total prediction points</p>
 
-      {!loading && !error && !hasScores && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 mb-6">
-          <span className="text-amber-500 text-lg leading-none mt-0.5">⏳</span>
+      {!loading && !error && !hasScores && entries.length > 0 && (
+        <div className="flex items-start gap-3 bg-sky-50 border border-sky-200 rounded-xl px-5 py-4 mb-6">
+          <span className="text-sky-500 text-lg leading-none mt-0.5">⚽</span>
           <div>
-            <p className="text-sm font-semibold text-amber-800">Tournament hasn't started yet</p>
-            <p className="text-xs text-amber-700 mt-0.5">Brackets are locked in. Scoring begins when matches are played — June 2026.</p>
+            <p className="text-sm font-semibold text-sky-800">R32 in progress — scoring live</p>
+            <p className="text-xs text-sky-700 mt-0.5">Points are awarded as matches finish. Check back after each result.</p>
           </div>
         </div>
       )}

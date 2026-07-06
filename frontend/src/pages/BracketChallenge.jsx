@@ -1,65 +1,86 @@
 // frontend/src/pages/BracketChallenge.jsx
-import { useEffect, useState, useCallback } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import MatchupCard from '../components/MatchupCard';
-import api, { predictMatch, submitUserPrediction, getMatches } from '../api/client';
-import { buildR32 } from '../data/wc2026';
+import { useEffect, useState, useCallback } from "react";
+import { useLocation, Link } from "react-router-dom";
+import MatchupCard from "../components/MatchupCard";
+import Banner from "../components/Banner";
+import api, {
+  predictMatch,
+  submitUserPrediction,
+  getMatches,
+} from "../api/client";
+import { buildR32 } from "../data/wc2026";
 
 // Official WC 2026 bracket — ordered so R16 pairs are correct
 // R16: (1v2) (3v4) (5v6) (7v8) (9v10) (11v12) (13v14) (15v16)
 // → Germany/France · Canada/Netherlands · Brazil/Norway · Mexico/England
 // → Portugal/Spain · USA/Belgium-Senegal · Argentina/Egypt · Switzerland/Colombia
 const INITIAL_R32 = [
-  { id: 'r32_1',  team1: 'Germany',               team2: 'Paraguay' },           // → R16 vs France winner
-  { id: 'r32_2',  team1: 'France',                team2: 'Sweden' },             // → R16 vs Germany winner
-  { id: 'r32_3',  team1: 'South Africa',          team2: 'Canada' },             // → R16 vs Netherlands winner
-  { id: 'r32_4',  team1: 'Netherlands',           team2: 'Morocco' },            // → R16 vs Canada
-  { id: 'r32_5',  team1: 'Brazil',                team2: 'Japan' },              // → R16 vs Norway winner
-  { id: 'r32_6',  team1: 'Ivory Coast',           team2: 'Norway' },             // → R16 vs Brazil
-  { id: 'r32_7',  team1: 'Mexico',                team2: 'Ecuador' },            // → R16 vs England winner
-  { id: 'r32_8',  team1: 'England',               team2: 'DR Congo' },           // → R16 vs Mexico winner
-  { id: 'r32_9',  team1: 'Portugal',              team2: 'Croatia' },            // → R16 vs Spain winner
-  { id: 'r32_10', team1: 'Spain',                 team2: 'Austria' },            // → R16 vs Portugal winner
-  { id: 'r32_11', team1: 'Belgium',               team2: 'Senegal' },            // → R16 vs USA winner
-  { id: 'r32_12', team1: 'USA',                   team2: 'Bosnia and Herzegovina' }, // → R16 vs Belgium/Senegal
-  { id: 'r32_13', team1: 'Argentina',             team2: 'Cape Verde' },         // → R16 vs Egypt winner
-  { id: 'r32_14', team1: 'Australia',             team2: 'Egypt' },              // → R16 vs Argentina
-  { id: 'r32_15', team1: 'Switzerland',           team2: 'Algeria' },            // → R16 vs Colombia winner
-  { id: 'r32_16', team1: 'Colombia',              team2: 'Ghana' },              // → R16 vs Switzerland
+  { id: "r32_1", team1: "Germany", team2: "Paraguay" }, // → R16 vs France winner
+  { id: "r32_2", team1: "France", team2: "Sweden" }, // → R16 vs Germany winner
+  { id: "r32_3", team1: "South Africa", team2: "Canada" }, // → R16 vs Netherlands winner
+  { id: "r32_4", team1: "Netherlands", team2: "Morocco" }, // → R16 vs Canada
+  { id: "r32_5", team1: "Brazil", team2: "Japan" }, // → R16 vs Norway winner
+  { id: "r32_6", team1: "Ivory Coast", team2: "Norway" }, // → R16 vs Brazil
+  { id: "r32_7", team1: "Mexico", team2: "Ecuador" }, // → R16 vs England winner
+  { id: "r32_8", team1: "England", team2: "DR Congo" }, // → R16 vs Mexico winner
+  { id: "r32_9", team1: "Portugal", team2: "Croatia" }, // → R16 vs Spain winner
+  { id: "r32_10", team1: "Spain", team2: "Austria" }, // → R16 vs Portugal winner
+  { id: "r32_11", team1: "Belgium", team2: "Senegal" }, // → R16 vs USA winner
+  { id: "r32_12", team1: "USA", team2: "Bosnia and Herzegovina" }, // → R16 vs Belgium/Senegal
+  { id: "r32_13", team1: "Argentina", team2: "Cape Verde" }, // → R16 vs Egypt winner
+  { id: "r32_14", team1: "Australia", team2: "Egypt" }, // → R16 vs Argentina
+  { id: "r32_15", team1: "Switzerland", team2: "Algeria" }, // → R16 vs Colombia winner
+  { id: "r32_16", team1: "Colombia", team2: "Ghana" }, // → R16 vs Switzerland
 ];
 
-const ROUNDS = ['Round of 32', 'Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
+const ROUNDS = [
+  "Round of 32",
+  "Round of 16",
+  "Quarter-finals",
+  "Semi-finals",
+  "Final",
+];
 const TOTAL_MATCHUPS = 16 + 8 + 4 + 2 + 1; // 31
 
 // Bracket slot → DB match ID
 // R32 DB IDs are sorted by date; bracket order follows official R16 path structure
 const MATCH_ID_MAP = {
-  r32_1:  3,  // Germany vs Paraguay
-  r32_2:  6,  // France vs Sweden
-  r32_3:  1,  // South Africa vs Canada
-  r32_4:  4,  // Netherlands vs Morocco
-  r32_5:  2,  // Brazil vs Japan
-  r32_6:  5,  // Ivory Coast vs Norway
-  r32_7:  7,  // Mexico vs Ecuador
-  r32_8:  8,  // England vs DR Congo
-  r32_9:  12, // Portugal vs Croatia
+  r32_1: 3, // Germany vs Paraguay
+  r32_2: 6, // France vs Sweden
+  r32_3: 1, // South Africa vs Canada
+  r32_4: 4, // Netherlands vs Morocco
+  r32_5: 2, // Brazil vs Japan
+  r32_6: 5, // Ivory Coast vs Norway
+  r32_7: 7, // Mexico vs Ecuador
+  r32_8: 8, // England vs DR Congo
+  r32_9: 12, // Portugal vs Croatia
   r32_10: 11, // Spain vs Austria
-  r32_11: 9,  // Belgium vs Senegal
+  r32_11: 9, // Belgium vs Senegal
   r32_12: 10, // USA vs Bosnia
   r32_13: 15, // Argentina vs Cape Verde
   r32_14: 14, // Australia vs Egypt
   r32_15: 13, // Switzerland vs Algeria
   r32_16: 16, // Colombia vs Ghana
-  r16_1: 17, r16_2: 18, r16_3: 19, r16_4: 20,
-  r16_5: 21, r16_6: 22, r16_7: 23, r16_8: 24,
-  qf_1: 25, qf_2: 26, qf_3: 27, qf_4: 28,
-  sf_1: 29, sf_2: 30,
+  r16_1: 17,
+  r16_2: 18,
+  r16_3: 19,
+  r16_4: 20,
+  r16_5: 21,
+  r16_6: 22,
+  r16_7: 23,
+  r16_8: 24,
+  qf_1: 25,
+  qf_2: 26,
+  qf_3: 27,
+  qf_4: 28,
+  sf_1: 29,
+  sf_2: 30,
   f_1: 31,
 };
 
 // Reverse map: DB match ID → bracket slot (for live data overlay)
 const DB_ID_TO_SLOT = Object.fromEntries(
-  Object.entries(MATCH_ID_MAP).map(([slot, id]) => [id, slot])
+  Object.entries(MATCH_ID_MAP).map(([slot, id]) => [id, slot]),
 );
 
 // card height + gap ≈ 82px — used to compute vertical bracket spacing
@@ -67,33 +88,50 @@ const CELL = 82;
 
 function buildEmptyRound(n, prefix) {
   return Array.from({ length: n }, (_, i) => ({
-    id: `${prefix}_${i + 1}`, team1: null, team2: null, prob1: null, prob2: null,
-    status: 'upcoming', homeScore: null, awayScore: null,
+    id: `${prefix}_${i + 1}`,
+    team1: null,
+    team2: null,
+    prob1: null,
+    prob2: null,
+    status: "upcoming",
+    homeScore: null,
+    awayScore: null,
   }));
 }
 
 function ModelBanner() {
   const stats = [
-    { label: 'Training matches', value: '49,287' },
-    { label: 'Model', value: 'XGBoost' },
-    { label: 'Features', value: '9' },
-    { label: '2018 WC accuracy', value: '40.6%' },
-    { label: '2022 WC accuracy', value: '39.1%' },
-    { label: 'Baseline (random)', value: '33.3%' },
+    { label: "Training matches", value: "49,287" },
+    { label: "Model", value: "XGBoost" },
+    { label: "Features", value: "9" },
+    { label: "2018 WC accuracy", value: "40.6%" },
+    { label: "2022 WC accuracy", value: "39.1%" },
+    { label: "Baseline (random)", value: "33.3%" },
   ];
   return (
     <div className="border border-slate-200 rounded-2xl bg-white p-6 mb-8 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="max-w-lg">
-          <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">Powered by ML</p>
-          <h2 className="text-lg font-bold text-slate-900 mb-2">How the predictions work</h2>
+          <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">
+            Powered by ML
+          </p>
+          <h2 className="text-lg font-bold text-slate-900 mb-2">
+            How the predictions work
+          </h2>
           <p className="text-sm text-slate-500 leading-relaxed">
-            Each matchup probability is generated by an XGBoost classifier trained on 49,287 international results from 1872–2024. Features include ELO ratings (tournament-weighted), recent form (last 5 matches), and head-to-head records. All World Cup matches are treated as neutral-ground.
+            Each matchup probability is generated by an XGBoost classifier
+            trained on 49,287 international results from 1872–2024. Features
+            include ELO ratings (tournament-weighted), recent form (last 5
+            matches), and head-to-head records. All World Cup matches are
+            treated as neutral-ground.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          {stats.map(s => (
-            <div key={s.label} className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center min-w-[90px]">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center min-w-[90px]"
+            >
               <div className="text-lg font-bold text-green-600">{s.value}</div>
               <div className="text-[11px] text-slate-400 mt-0.5">{s.label}</div>
             </div>
@@ -104,44 +142,64 @@ function ModelBanner() {
   );
 }
 
-const SUBMISSION_KEY = 'wc2026_bracket_submission';
+const SUBMISSION_KEY = "wc2026_bracket_submission";
 
 function getSavedSubmission() {
-  try { return JSON.parse(localStorage.getItem(SUBMISSION_KEY)) || null; } catch { return null; }
+  try {
+    return JSON.parse(localStorage.getItem(SUBMISSION_KEY)) || null;
+  } catch {
+    return null;
+  }
 }
 
 export default function BracketChallenge() {
   const location = useLocation();
-  const [username, setUsername] = useState(() => getSavedSubmission()?.username || '');
-  const [submitted, setSubmitted] = useState(() => !!getSavedSubmission()?.username);
+  const [username, setUsername] = useState(
+    () => getSavedSubmission()?.username || "",
+  );
+  const [submitted, setSubmitted] = useState(
+    () => !!getSavedSubmission()?.username,
+  );
   const [submitting, setSubmitting] = useState(false);
-  const [submitMsg, setSubmitMsg] = useState('');
+  const [submitMsg, setSubmitMsg] = useState("");
 
   // Use group-stage picks from router state, localStorage, or default R32
   const r32Source = (() => {
     if (location.state?.r32) return location.state.r32;
     try {
-      const saved = localStorage.getItem('wc2026_group_picks');
+      const saved = localStorage.getItem("wc2026_group_picks");
       if (saved) {
         const { selections, thirdSelected } = JSON.parse(saved);
-        const allDone = Object.values(selections).every(s => s.length === 2);
+        const allDone = Object.values(selections).every((s) => s.length === 2);
         if (allDone && thirdSelected?.length === 8) {
           const groupResults = Object.fromEntries(
-            Object.entries(selections).map(([g, s]) => [g, { winner: s[0], runnerUp: s[1] }])
+            Object.entries(selections).map(([g, s]) => [
+              g,
+              { winner: s[0], runnerUp: s[1] },
+            ]),
           );
           return buildR32(groupResults, thirdSelected);
         }
       }
-    } catch { /* fall through */ }
+    } catch {
+      /* fall through */
+    }
     return INITIAL_R32;
   })();
 
   const [bracket, setBracket] = useState([
-    r32Source.map(m => ({ ...m, prob1: null, prob2: null, status: 'upcoming', homeScore: null, awayScore: null })),
-    buildEmptyRound(8, 'r16'),
-    buildEmptyRound(4, 'qf'),
-    buildEmptyRound(2, 'sf'),
-    buildEmptyRound(1, 'f'),
+    r32Source.map((m) => ({
+      ...m,
+      prob1: null,
+      prob2: null,
+      status: "upcoming",
+      homeScore: null,
+      awayScore: null,
+    })),
+    buildEmptyRound(8, "r16"),
+    buildEmptyRound(4, "qf"),
+    buildEmptyRound(2, "sf"),
+    buildEmptyRound(1, "f"),
   ]);
 
   const [picks, setPicks] = useState({});
@@ -149,129 +207,221 @@ export default function BracketChallenge() {
 
   const [r16Predictions, setR16Predictions] = useState(null);
 
-  // Overlay live match data (status + scores) — polls every 60s
-  const applyLiveData = useCallback((data) => {
-    const bySlot = {};
-    data.forEach(m => {
-      const slot = DB_ID_TO_SLOT[m.id];
-      if (slot) bySlot[slot] = m;
-    });
-    setBracket(prev => prev.map((round, ri) => {
-      if (ri !== 0) return round;
-      return round.map(matchup => {
-        const live = bySlot[matchup.id];
-        if (!live) return matchup;
-        const updated = { ...matchup, status: live.status, homeScore: live.home_score, awayScore: live.away_score };
-        if (live.home_team && !live.home_team.includes('TBD')) {
-          updated.team1 = live.home_team;
-          updated.team2 = live.away_team;
-        }
-        return updated;
-      });
-    }));
-  }, []);
-
-  useEffect(() => {
-    getMatches().then(({ data }) => applyLiveData(data)).catch(() => {});
-    const timer = setInterval(() => {
-      getMatches().then(({ data }) => applyLiveData(data)).catch(() => {});
-    }, 60_000);
-    return () => clearInterval(timer);
-  }, [applyLiveData]);
-
-  // Fetch AI bracket simulation (R16 predictions)
-  useEffect(() => {
-    api.get('/bracket-predictions').then(({ data }) => {
-      setR16Predictions(data.rounds?.[1]?.matchups || null); // index 1 = R16
-    }).catch(() => {});
-  }, []);
-
   const fetchProbs = useCallback(async (matchupId, team1, team2) => {
     if (!team1 || !team2) return;
-    setLoadingProbs(p => ({ ...p, [matchupId]: true }));
+    setLoadingProbs((p) => ({ ...p, [matchupId]: true }));
     try {
       const { data } = await predictMatch(team1, team2, true);
       // Knockout rounds have no draws — redistribute draw probability proportionally
       const base = data.prob_home_win + data.prob_away_win;
       const prob1 = base > 0 ? data.prob_home_win / base : 0.5;
       const prob2 = base > 0 ? data.prob_away_win / base : 0.5;
-      setBracket(prev => prev.map(round =>
-        round.map(m =>
-          m.id === matchupId
-            ? { ...m, prob1, prob2 }
-            : m
-        )
-      ));
+      setBracket((prev) =>
+        prev.map((round) =>
+          round.map((m) => (m.id === matchupId ? { ...m, prob1, prob2 } : m)),
+        ),
+      );
     } catch {
       // silently fail
     } finally {
-      setLoadingProbs(p => ({ ...p, [matchupId]: false }));
+      setLoadingProbs((p) => ({ ...p, [matchupId]: false }));
     }
   }, []);
 
+  // Winner of a decided matchup — penalty-aware
+  const winnerOf = (m) => {
+    if (m.status !== "final" || m.homeScore == null) return null;
+    if (m.homeScore > m.awayScore) return m.team1;
+    if (m.awayScore > m.homeScore) return m.team2;
+    if (m.wentToPenalties && m.penaltyHome != null) {
+      return m.penaltyHome > m.penaltyAway ? m.team1 : m.team2;
+    }
+    return null;
+  };
+
+  // Overlay real DB fixtures/results across ALL rounds, then advance real winners
+  // into the next round (results always override user picks). Polls every 60s.
+  const applyLiveData = useCallback(
+    (data) => {
+      const bySlot = {};
+      data.forEach((m) => {
+        const slot = DB_ID_TO_SLOT[m.id];
+        if (slot) bySlot[slot] = m;
+      });
+      const invalidated = new Set();
+      const toFetch = [];
+
+      const dbFilled = new Set();
+      setBracket((prev) => {
+        const next = prev.map((r) => r.map((m) => ({ ...m })));
+
+        // 1. Overlay every slot the DB knows about (DB is authoritative for its teams)
+        next.forEach((round) =>
+          round.forEach((m) => {
+            const live = bySlot[m.id];
+            if (!live) return;
+            m.status = live.status;
+            m.homeScore = live.home_score;
+            m.awayScore = live.away_score;
+            m.matchDate = live.match_date;
+            m.wentToPenalties = live.went_to_penalties;
+            m.penaltyHome = live.penalty_home;
+            m.penaltyAway = live.penalty_away;
+            m.isUpset = live.is_upset;
+            if (live.prob_home != null) {
+              m.probHome = live.prob_home;
+              m.probDraw = live.prob_draw;
+              m.probAway = live.prob_away;
+            }
+            if (live.home_team && !live.home_team.includes("TBD")) {
+              m.team1 = live.home_team;
+              m.team2 = live.away_team;
+              dbFilled.add(m.id); // keep the DB's real home/away order — don't let step 2 reorder it
+            }
+          }),
+        );
+
+        // 2. Advance real winners into downstream slots the DB hasn't populated yet (QF/SF/Final)
+        for (let ri = 0; ri < next.length - 1; ri++) {
+          next[ri].forEach((m, idx) => {
+            const w = winnerOf(m);
+            if (!w) return;
+            const parent = next[ri + 1][Math.floor(idx / 2)];
+            if (dbFilled.has(parent.id)) return; // DB already gave this slot its real teams
+            const slot = idx % 2 === 0 ? "team1" : "team2";
+            if (parent[slot] !== w) {
+              parent[slot] = w;
+              parent.prob1 = parent.prob2 = null;
+              invalidated.add(parent.id);
+              if (parent.team1 && parent.team2)
+                toFetch.push([parent.id, parent.team1, parent.team2]);
+            }
+          });
+        }
+        return next;
+      });
+
+      if (invalidated.size) {
+        setPicks((p) => {
+          const u = { ...p };
+          invalidated.forEach((id) => delete u[id]);
+          return u;
+        });
+      }
+      // Fetch 2-way probs for freshly-advanced matchups the DB has no stored probs for
+      toFetch.forEach(([mid, t1, t2]) =>
+        setTimeout(() => fetchProbs(mid, t1, t2), 0),
+      );
+    },
+    [fetchProbs],
+  );
+
   useEffect(() => {
-    r32Source.forEach(m => fetchProbs(m.id, m.team1, m.team2));
+    getMatches()
+      .then(({ data }) => applyLiveData(data))
+      .catch(() => {});
+    const timer = setInterval(() => {
+      getMatches()
+        .then(({ data }) => applyLiveData(data))
+        .catch(() => {});
+    }, 60_000);
+    return () => clearInterval(timer);
+  }, [applyLiveData]);
+
+  // Fetch AI bracket simulation (R16 predictions)
+  useEffect(() => {
+    api
+      .get("/bracket-predictions")
+      .then(({ data }) => {
+        setR16Predictions(data.rounds?.[1]?.matchups || null); // index 1 = R16
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    r32Source.forEach((m) => fetchProbs(m.id, m.team1, m.team2));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchProbs]);
 
-  const handlePick = useCallback((matchupId, winner) => {
-    setPicks(prev => ({ ...prev, [matchupId]: winner }));
+  const handlePick = useCallback(
+    (matchupId, winner) => {
+      setPicks((prev) => ({ ...prev, [matchupId]: winner }));
 
-    setBracket(prev => {
-      const next = prev.map(r => r.map(m => ({ ...m })));
+      setBracket((prev) => {
+        const next = prev.map((r) => r.map((m) => ({ ...m })));
 
-      for (let roundIdx = 0; roundIdx < next.length - 1; roundIdx++) {
-        const matchIdx = next[roundIdx].findIndex(m => m.id === matchupId);
-        if (matchIdx === -1) continue;
+        for (let roundIdx = 0; roundIdx < next.length - 1; roundIdx++) {
+          const matchIdx = next[roundIdx].findIndex((m) => m.id === matchupId);
+          if (matchIdx === -1) continue;
 
-        const nextMatchIdx = Math.floor(matchIdx / 2);
-        const slot = matchIdx % 2 === 0 ? 'team1' : 'team2';
-        const nextMatchup = next[roundIdx + 1][nextMatchIdx];
+          const nextMatchIdx = Math.floor(matchIdx / 2);
+          const slot = matchIdx % 2 === 0 ? "team1" : "team2";
+          const nextMatchup = next[roundIdx + 1][nextMatchIdx];
 
-        if (nextMatchup[slot] !== winner) {
-          nextMatchup[slot] = winner;
-          nextMatchup.prob1 = null;
-          nextMatchup.prob2 = null;
+          if (nextMatchup[slot] !== winner) {
+            nextMatchup[slot] = winner;
+            nextMatchup.prob1 = null;
+            nextMatchup.prob2 = null;
 
-          setPicks(p => {
-            const updated = { ...p };
-            delete updated[nextMatchup.id];
-            return updated;
-          });
+            setPicks((p) => {
+              const updated = { ...p };
+              delete updated[nextMatchup.id];
+              return updated;
+            });
 
-          if (nextMatchup.team1 && nextMatchup.team2) {
-            setTimeout(() => fetchProbs(nextMatchup.id, nextMatchup.team1, nextMatchup.team2), 0);
+            if (nextMatchup.team1 && nextMatchup.team2) {
+              setTimeout(
+                () =>
+                  fetchProbs(
+                    nextMatchup.id,
+                    nextMatchup.team1,
+                    nextMatchup.team2,
+                  ),
+                0,
+              );
+            }
           }
+          break;
         }
-        break;
-      }
-      return next;
-    });
-  }, [fetchProbs]);
+        return next;
+      });
+    },
+    [fetchProbs],
+  );
 
   const handleSubmit = async () => {
-    if (!username.trim()) return setSubmitMsg('Enter a username first');
+    if (!username.trim()) return setSubmitMsg("Enter a username first");
     if (Object.keys(picks).length < TOTAL_MATCHUPS) {
-      return setSubmitMsg(`Complete all ${TOTAL_MATCHUPS} picks first (${Object.keys(picks).length}/${TOTAL_MATCHUPS} done)`);
+      return setSubmitMsg(
+        `Complete all ${TOTAL_MATCHUPS} picks first (${Object.keys(picks).length}/${TOTAL_MATCHUPS} done)`,
+      );
     }
     setSubmitting(true);
-    setSubmitMsg('');
+    setSubmitMsg("");
     try {
       const allMatchups = bracket.flat();
       await Promise.all(
         Object.entries(picks).map(([matchupId, winner]) => {
-          const matchup = allMatchups.find(m => m.id === matchupId);
-          const outcome = matchup && matchup.team2 === winner ? 'away_win' : 'home_win';
+          const matchup = allMatchups.find((m) => m.id === matchupId);
+          const outcome =
+            matchup && matchup.team2 === winner ? "away_win" : "home_win";
           const dbMatchId = MATCH_ID_MAP[matchupId];
           if (!dbMatchId) return Promise.resolve();
-          return submitUserPrediction(username.trim(), dbMatchId, outcome).catch(() => null);
-        })
+          return submitUserPrediction(
+            username.trim(),
+            dbMatchId,
+            outcome,
+          ).catch(() => null);
+        }),
       );
-      localStorage.setItem(SUBMISSION_KEY, JSON.stringify({ username: username.trim() }));
+      localStorage.setItem(
+        SUBMISSION_KEY,
+        JSON.stringify({ username: username.trim() }),
+      );
       setSubmitted(true);
-      setSubmitMsg('');
+      setSubmitMsg("");
     } catch {
-      setSubmitMsg('Something went wrong. Try again.');
+      setSubmitMsg("Something went wrong. Try again.");
     } finally {
       setSubmitting(false);
     }
@@ -284,39 +434,87 @@ export default function BracketChallenge() {
   const bracketGap = (roundIdx) =>
     roundIdx === 0 ? 6 : Math.pow(2, roundIdx) * CELL - 76;
   const bracketPadTop = (roundIdx) =>
-    roundIdx === 0 ? 0 : Math.pow(2, roundIdx) * CELL / 2 - 38;
+    roundIdx === 0 ? 0 : (Math.pow(2, roundIdx) * CELL) / 2 - 38;
 
   return (
     <div className="max-w-none">
-      {/* Page title */}
+      {/* Hero */}
       <div className="max-w-5xl mx-auto mb-6">
-        <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">FIFA World Cup 2026 · Live</p>
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-1">AI Bracket Challenge</h1>
-        <p className="text-slate-500 text-sm">
-          Pick the winner of every knockout match — from Round of 32 to the Final. Probabilities update with real results. Live scores refresh every 60s.
-        </p>
+        <div className="pitch-deep pitch-stripes rounded-3xl px-6 sm:px-10 py-8 sm:py-10 border-2 border-pitch-700 shadow-[0_10px_40px_rgba(5,56,37,0.25)] relative overflow-hidden reveal">
+          <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gold-400 mb-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+            FIFA World Cup 2026 · Round of 16 · Live
+          </span>
+          <h1 className="font-display text-4xl sm:text-6xl text-white leading-[0.95] tracking-tight mb-3">
+            ROAD TO THE
+            <br />
+            <span className="text-gold-400">FINAL</span>
+          </h1>
+          <p className="text-emerald-100/80 text-sm max-w-xl">
+            Call every knockout match, R32 to the trophy. The AI model posts
+            live Win / Draw / Loss odds — beat it, and beat your friends. Scores
+            refresh every 60s.
+          </p>
+        </div>
+      </div>
+
+      {/* Shock result — Canada eliminated */}
+      <div className="max-w-5xl mx-auto mb-6">
+        <Banner
+          tone="red"
+          eyebrow="Shock result · Round of 16"
+          title="Canada are out"
+          icon="🇨🇦"
+        >
+          The co-hosts became the{" "}
+          <span className="font-semibold">first team eliminated</span>, falling{" "}
+          <span className="font-semibold">3–0 to Morocco</span> after advancing
+          from the Round of 32.
+        </Banner>
       </div>
 
       {/* R16 AI Predictions panel */}
       {r16Predictions && (
         <div className="max-w-5xl mx-auto mb-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-widest text-amber-600 mb-1">AI Simulation</p>
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Predicted Round of 16</h2>
+          <p className="text-xs font-bold uppercase tracking-widest text-amber-600 mb-1">
+            AI Simulation
+          </p>
+          <h2 className="text-lg font-bold text-slate-900 mb-4">
+            Predicted Round of 16
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {r16Predictions.map((m, i) => (
-              <div key={i} className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden text-sm">
+              <div
+                key={i}
+                className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden text-sm"
+              >
                 <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
-                  <span className={`font-medium truncate ${m.predicted_winner === m.team1 ? 'text-green-700 font-bold' : 'text-slate-500'}`}>{m.team1}</span>
-                  <span className="text-xs text-slate-400 shrink-0 ml-1">{Math.round(m.prob1 * 100)}%</span>
+                  <span
+                    className={`font-medium truncate ${m.predicted_winner === m.team1 ? "text-green-700 font-bold" : "text-slate-500"}`}
+                  >
+                    {m.team1}
+                  </span>
+                  <span className="text-xs text-slate-400 shrink-0 ml-1">
+                    {Math.round(m.prob1 * 100)}%
+                  </span>
                 </div>
                 <div className="flex items-center justify-between px-3 py-2">
-                  <span className={`font-medium truncate ${m.predicted_winner === m.team2 ? 'text-green-700 font-bold' : 'text-slate-500'}`}>{m.team2}</span>
-                  <span className="text-xs text-slate-400 shrink-0 ml-1">{Math.round(m.prob2 * 100)}%</span>
+                  <span
+                    className={`font-medium truncate ${m.predicted_winner === m.team2 ? "text-green-700 font-bold" : "text-slate-500"}`}
+                  >
+                    {m.team2}
+                  </span>
+                  <span className="text-xs text-slate-400 shrink-0 ml-1">
+                    {Math.round(m.prob2 * 100)}%
+                  </span>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-xs text-slate-400 mt-3">Predicted winners in bold green — based on who AI expects to win each R32 match.</p>
+          <p className="text-xs text-slate-400 mt-3">
+            Predicted winners in bold green — based on who AI expects to win
+            each R32 match.
+          </p>
         </div>
       )}
 
@@ -331,7 +529,7 @@ export default function BracketChallenge() {
           type="text"
           placeholder="Your username"
           value={username}
-          onChange={e => setUsername(e.target.value)}
+          onChange={(e) => setUsername(e.target.value)}
           disabled={submitted}
           className="bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 placeholder:text-slate-400"
         />
@@ -344,7 +542,9 @@ export default function BracketChallenge() {
               style={{ width: `${(totalPicks / TOTAL_MATCHUPS) * 100}%` }}
             />
           </div>
-          <span className="text-sm text-slate-500 whitespace-nowrap">{totalPicks}/{TOTAL_MATCHUPS} picks</span>
+          <span className="text-sm text-slate-500 whitespace-nowrap">
+            {totalPicks}/{TOTAL_MATCHUPS} picks
+          </span>
         </div>
 
         {champion && (
@@ -356,15 +556,23 @@ export default function BracketChallenge() {
         {!submitted ? (
           <button
             onClick={handleSubmit}
-            disabled={submitting || totalPicks < TOTAL_MATCHUPS || !username.trim()}
+            disabled={
+              submitting || totalPicks < TOTAL_MATCHUPS || !username.trim()
+            }
             className="bg-green-600 hover:bg-green-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap cursor-pointer disabled:cursor-not-allowed"
           >
-            {submitting ? 'Submitting…' : 'Submit Bracket'}
+            {submitting ? "Submitting…" : "Submit Bracket"}
           </button>
         ) : (
           <div className="flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-100 border border-green-300 px-3 py-2 rounded-xl">
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none">
-              <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path
+                d="M3 8l3.5 3.5L13 4.5"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             Bracket locked in as <span className="font-bold">{username}</span>
           </div>
@@ -376,25 +584,45 @@ export default function BracketChallenge() {
       {submitted && (
         <div className="max-w-5xl mx-auto mb-6 bg-green-50 border border-green-300 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-bold text-green-800 mb-0.5">Your bracket is submitted!</p>
+            <p className="text-sm font-bold text-green-800 mb-0.5">
+              Your bracket is submitted!
+            </p>
             <p className="text-xs text-green-700">
-              Predictions are locked in as <span className="font-semibold">{username}</span>.
-              {champion && <> Your champion pick: <span className="font-semibold">{champion}</span>.</>}
-              {' '}Scoring begins when matches are played in June 2026.
+              Predictions are locked in as{" "}
+              <span className="font-semibold">{username}</span>.
+              {champion && (
+                <>
+                  {" "}
+                  Your champion pick:{" "}
+                  <span className="font-semibold">{champion}</span>.
+                </>
+              )}{" "}
+              The tournament is live — points update as each match finishes.
             </p>
           </div>
-          <Link
-            to="/leaderboard"
-            className="text-xs font-bold text-green-700 border border-green-400 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
-          >
-            View leaderboard →
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              to="/my-predictions"
+              className="text-xs font-bold text-green-700 border border-green-400 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+            >
+              My predictions →
+            </Link>
+            <Link
+              to="/leaderboard"
+              className="text-xs font-bold text-green-700 border border-green-400 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+            >
+              Leaderboard →
+            </Link>
+          </div>
         </div>
       )}
 
       {/* Bracket — horizontally scrollable */}
       <div className="overflow-x-auto pb-8">
-        <div className="flex gap-6 min-w-max px-4" style={{ alignItems: 'flex-start' }}>
+        <div
+          className="flex gap-6 min-w-max px-4"
+          style={{ alignItems: "flex-start" }}
+        >
           {bracket.map((round, roundIdx) => (
             <div key={roundIdx} className="flex flex-col">
               {/* Round label */}
@@ -410,7 +638,7 @@ export default function BracketChallenge() {
                   paddingTop: `${bracketPadTop(roundIdx)}px`,
                 }}
               >
-                {round.map(matchup => (
+                {round.map((matchup) => (
                   <MatchupCard
                     key={matchup.id}
                     matchup={matchup}
@@ -429,12 +657,18 @@ export default function BracketChallenge() {
               Champion
             </div>
             <div style={{ paddingTop: `${bracketPadTop(5)}px` }}>
-              <div className={`w-44 rounded-xl border-2 p-5 text-center transition-all ${
-                champion ? 'border-amber-400 bg-amber-50 shadow-[0_4px_20px_rgba(251,191,36,0.25)]' : 'border-slate-200 bg-white'
-              }`}>
+              <div
+                className={`w-44 rounded-xl border-2 p-5 text-center transition-all ${
+                  champion
+                    ? "border-amber-400 bg-amber-50 shadow-[0_4px_20px_rgba(251,191,36,0.25)]"
+                    : "border-slate-200 bg-white"
+                }`}
+              >
                 <div className="text-3xl mb-2">🏆</div>
-                <div className={`text-sm font-bold leading-snug ${champion ? 'text-amber-700' : 'text-slate-400'}`}>
-                  {champion || 'TBD'}
+                <div
+                  className={`text-sm font-bold leading-snug ${champion ? "text-amber-700" : "text-slate-400"}`}
+                >
+                  {champion || "TBD"}
                 </div>
               </div>
             </div>

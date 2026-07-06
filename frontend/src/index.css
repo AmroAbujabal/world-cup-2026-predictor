@@ -1,3 +1,79 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    font-family: theme("fontFamily.sans");
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Russo One — big, blocky, competitive impact type */
+  .font-display {
+    font-family: theme("fontFamily.display");
+    letter-spacing: 0.005em;
+  }
+  .nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer utilities {
+  /* Energetic stadium atmosphere — green + gold glows on a bright canvas */
+  .pitch-bg {
+    background-color: #f4fbf6;
+    background-image:
+      radial-gradient(
+        60rem 40rem at 85% -10%,
+        rgba(245, 158, 11, 0.16),
+        transparent 60%
+      ),
+      radial-gradient(
+        55rem 45rem at -5% 8%,
+        rgba(16, 185, 129, 0.18),
+        transparent 55%
+      ),
+      radial-gradient(
+        40rem 40rem at 50% 120%,
+        rgba(37, 99, 235, 0.1),
+        transparent 60%
+      );
+  }
+  /* Deep-pitch panel (hero / nav) */
+  .pitch-deep {
+    background-color: #053825;
+    background-image:
+      radial-gradient(
+        40rem 30rem at 100% 0%,
+        rgba(245, 158, 11, 0.22),
+        transparent 55%
+      ),
+      radial-gradient(
+        36rem 30rem at 0% 100%,
+        rgba(16, 185, 129, 0.28),
+        transparent 55%
+      );
+  }
+  /* Faint pitch stripes overlay */
+  .pitch-stripes {
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.03) 0 40px,
+      transparent 40px 80px
+    );
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .pop {
+      animation: pop-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    /* Live shimmer sweep for probability bars */
+    .shimmer {
+      background-size: 200% 100%;
+      animation: shimmer 2.2s linear infinite;
+    }
+  }
+}

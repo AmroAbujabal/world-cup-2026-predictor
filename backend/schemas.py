@@ -35,6 +35,7 @@ class LeaderboardEntry(BaseModel):
     username: str
     total_points: int
     correct_predictions: int
+    total_predictions: int = 0
 
 
 class LeaderboardResponse(BaseModel):
@@ -45,6 +46,9 @@ class ResultRequest(BaseModel):
     match_id: int
     home_score: int
     away_score: int
+    penalty_home: int | None = None
+    penalty_away: int | None = None
+    went_to_extra_time: bool | None = None
 
 
 class MatchResponse(BaseModel):
@@ -56,3 +60,11 @@ class MatchResponse(BaseModel):
     status: str
     home_score: int | None = None
     away_score: int | None = None
+    went_to_penalties: bool | None = None
+    penalty_home: int | None = None
+    penalty_away: int | None = None
+    went_to_extra_time: bool | None = None
+    is_upset: bool | None = None
+    prob_home: float | None = None
+    prob_draw: float | None = None
+    prob_away: float | None = None

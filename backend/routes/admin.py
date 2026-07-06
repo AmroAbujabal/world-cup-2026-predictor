@@ -5,8 +5,10 @@ import os
 from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 from backend.db.database import get_db
-from backend.db.models import Match, User, UserPrediction
+from backend.db.models import Match
 from backend.schemas import ResultRequest
+from backend.services.scoring import score_match
+from backend.services import results_csv
 
 router = APIRouter(prefix="/admin")
 
@@ -23,43 +25,45 @@ def update_result(
     db: Session = Depends(get_db),
     _: None = Depends(_verify_token),
 ):
-    """Post a match result: scores predictions, updates leaderboard, marks match final."""
+    """Atomic result flow: save score → recalc ELO/form source → score predictions → leaderboard.
+
+    Marks the match final, awards points via the shared scorer, appends the result to
+    data/results.csv (so ELO/form update on the next retrain), and clears the model cache.
+    """
     match = db.query(Match).filter(Match.id == request.match_id).first()
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
 
-    match.home_score = request.home_score
-    match.away_score = request.away_score
-    match.is_locked = True
-    match.status = "final"
+    actual, scored = score_match(
+        db, match, request.home_score, request.away_score,
+        penalty_home=request.penalty_home,
+        penalty_away=request.penalty_away,
+        went_to_extra_time=request.went_to_extra_time,
+    )
 
-    if request.home_score > request.away_score:
-        actual = "home_win"
-    elif request.home_score < request.away_score:
-        actual = "away_win"
-    else:
-        actual = "draw"
-
-    unscored = db.query(UserPrediction).filter(
-        UserPrediction.match_id == request.match_id,
-        UserPrediction.points_awarded.is_(None),
-    ).all()
-
-    for pred in unscored:
-        pts = 3 if pred.predicted_outcome == actual else 0
-        pred.points_awarded = pts
-        user = db.query(User).filter(User.id == pred.user_id).first()
-        if user:
-            user.total_points += pts
+    # ELO/form feed: append this result to the training CSV (deduped, canonical names).
+    # Penalty ties count as draws for ELO — store the level score.
+    csv_home, csv_away = request.home_score, request.away_score
+    if match.went_to_penalties:
+        csv_home = csv_away = min(request.home_score, request.away_score)
+    results_csv.append_result(
+        match.match_date.date().isoformat(),
+        match.home_team, match.away_team, csv_home, csv_away,
+    )
 
     db.commit()
+
+    # Retrain on next /predict so the new result influences ELO/form.
+    from backend.routes.predictions import get_predictor
+    get_predictor.cache_clear()
+
     return {
         "match_id": request.match_id,
         "home_team": match.home_team,
         "away_team": match.away_team,
         "score": f"{request.home_score}–{request.away_score}",
         "actual_outcome": actual,
-        "predictions_scored": len(unscored),
+        "predictions_scored": scored,
     }
 
 

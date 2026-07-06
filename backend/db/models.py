@@ -1,6 +1,6 @@
 # backend/db/models.py
 from datetime import datetime, timezone
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -21,6 +21,18 @@ class Match(Base):
     is_locked = Column(Boolean, default=False)
     status = Column(String, default="upcoming")   # upcoming | live | final
     external_id = Column(Integer, nullable=True)  # football-data.org match ID
+
+    # Knockout / display metadata (nullable — added via _migrate_db for existing DBs)
+    went_to_penalties = Column(Boolean, nullable=True)
+    penalty_home = Column(Integer, nullable=True)
+    penalty_away = Column(Integer, nullable=True)
+    went_to_extra_time = Column(Boolean, nullable=True)
+    is_upset = Column(Boolean, nullable=True)
+
+    # Stored model Win/Draw/Loss probabilities (for the current home/away orientation)
+    prob_home = Column(Float, nullable=True)
+    prob_draw = Column(Float, nullable=True)
+    prob_away = Column(Float, nullable=True)
 
     predictions = relationship("UserPrediction", back_populates="match")
 

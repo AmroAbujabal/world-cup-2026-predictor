@@ -29,7 +29,8 @@ async def poll_loop():
 async def _check_and_update():
     from backend.services.football_data import get_wc_matches, normalize
     from backend.db.database import SessionLocal
-    from backend.db.models import Match, User, UserPrediction
+    from backend.db.models import Match
+    from backend.services.scoring import score_match
 
     # Fetch all knockout matches (covers R32 through Final)
     raw_matches = await get_wc_matches()
@@ -45,6 +46,11 @@ async def _check_and_update():
             ext_id = m["id"]
             db_match = db.query(Match).filter(Match.external_id == ext_id).first()
             if not db_match:
+                continue
+
+            # Never overwrite a result already finalised locally (protects corrected
+            # penalty scorelines stored as 1–1 from being clobbered by the feed).
+            if db_match.status == "final" and db_match.is_locked:
                 continue
 
             fd_status = m.get("status", "")
@@ -63,11 +69,8 @@ async def _check_and_update():
                 hs, as_ = score.get("home"), score.get("away")
                 if hs is not None and as_ is not None:
                     if db_match.home_score != hs or db_match.away_score != as_:
-                        db_match.home_score = hs
-                        db_match.away_score = as_
-                        db_match.is_locked = True
+                        score_match(db, db_match, hs, as_)
                         changed = True
-                        _score_predictions(db, db_match, hs, as_)
 
             if changed:
                 db.commit()
@@ -77,19 +80,3 @@ async def _check_and_update():
                 )
     finally:
         db.close()
-
-
-def _score_predictions(db, match, home_score: int, away_score: int):
-    from backend.db.models import User, UserPrediction
-    actual = "home_win" if home_score > away_score else \
-             "away_win" if home_score < away_score else "draw"
-    unscored = db.query(UserPrediction).filter(
-        UserPrediction.match_id == match.id,
-        UserPrediction.points_awarded.is_(None),
-    ).all()
-    for pred in unscored:
-        pts = 3 if pred.predicted_outcome == actual else 0
-        pred.points_awarded = pts
-        user = db.query(User).filter(User.id == pred.user_id).first()
-        if user:
-            user.total_points += pts

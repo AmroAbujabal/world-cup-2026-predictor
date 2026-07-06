@@ -1,4 +1,5 @@
 # backend/routes/predictions.py
+from datetime import datetime, timezone
 from functools import lru_cache
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -61,10 +62,33 @@ BRACKET_R32 = [
     ("Colombia",              "Ghana"),              # 15 → R16 vs Switzerland       (DB id 16)
 ]
 
-# Known R32 results — bracket index → actual winner
+# Known R32 results — bracket index → actual winner (all 16 complete)
 R32_RESULTS = {
-    2: "Canada",   # South Africa 0-1 Canada  (bracket idx 2)
-    4: "Brazil",   # Brazil 2-1 Japan          (bracket idx 4)
+    0: "Paraguay",     # Germany 1-1 Paraguay (Paraguay 4-3 pens)
+    1: "France",       # France 3-0 Sweden
+    2: "Canada",       # South Africa 0-1 Canada
+    3: "Morocco",      # Netherlands 1-1 Morocco (Morocco 3-2 pens)
+    4: "Brazil",       # Brazil 2-1 Japan
+    5: "Norway",       # Ivory Coast 1-2 Norway
+    6: "Mexico",       # Mexico 2-0 Ecuador
+    7: "England",      # England 2-1 DR Congo
+    8: "Portugal",     # Portugal 2-1 Croatia
+    9: "Spain",        # Spain 3-0 Austria
+    10: "Belgium",     # Belgium 3-2 Senegal (AET)
+    11: "USA",         # USA 2-0 Bosnia and Herzegovina
+    12: "Argentina",   # Argentina 3-2 Cape Verde (AET)
+    13: "Egypt",       # Australia 1-1 Egypt (Egypt 4-2 pens)
+    14: "Switzerland", # Switzerland 2-0 Algeria
+    15: "Colombia",    # Colombia 1-0 Ghana
+}
+
+# Known R16 results — R16 match index → actual winner (pairs of R32 winners, in order)
+# 0:(Paraguay,France) 1:(Canada,Morocco) 2:(Brazil,Norway) 3:(Mexico,England) ...
+R16_RESULTS = {
+    0: "France",    # France 1-0 Paraguay
+    1: "Morocco",   # Morocco 3-0 Canada
+    2: "Norway",    # Norway 2-0 Brazil (upset)
+    3: "England",   # England 3-2 Mexico
 }
 
 
@@ -129,7 +153,12 @@ def bracket_predictions():
     for round_idx, round_name in enumerate(round_names):
         matchups = []
         for match_idx, (a, b) in enumerate(pairs):
-            known = R32_RESULTS.get(match_idx) if round_idx == 0 else None
+            if round_idx == 0:
+                known = R32_RESULTS.get(match_idx)
+            elif round_idx == 1:
+                known = R16_RESULTS.get(match_idx)
+            else:
+                known = None
             matchups.append(predict_winner(a, b, known_winner=known))
         rounds.append({"round": round_name, "matchups": matchups})
         winners = [m["predicted_winner"] for m in matchups]
@@ -140,6 +169,15 @@ def bracket_predictions():
     return {"rounds": rounds, "champion": champion}
 
 
+STAGE_ID_RANGES = {
+    "R32":   range(1, 17),
+    "R16":   range(17, 25),
+    "QF":    range(25, 29),
+    "SF":    range(29, 31),
+    "Final": range(31, 32),
+}
+
+
 def _stage_label(match_id: int) -> str:
     if match_id <= 16: return "R32"
     if match_id <= 24: return "R16"
@@ -148,23 +186,63 @@ def _stage_label(match_id: int) -> str:
     return "Final"
 
 
+def _to_match_response(m: Match) -> MatchResponse:
+    return MatchResponse(
+        id=m.id,
+        home_team=m.home_team,
+        away_team=m.away_team,
+        match_date=m.match_date.isoformat(),
+        stage=_stage_label(m.id),
+        status=m.status or "upcoming",
+        home_score=m.home_score,
+        away_score=m.away_score,
+        went_to_penalties=m.went_to_penalties,
+        penalty_home=m.penalty_home,
+        penalty_away=m.penalty_away,
+        went_to_extra_time=m.went_to_extra_time,
+        is_upset=m.is_upset,
+        prob_home=m.prob_home,
+        prob_draw=m.prob_draw,
+        prob_away=m.prob_away,
+    )
+
+
 @router.get("/matches", response_model=list[MatchResponse])
 def get_matches(db: Session = Depends(get_db)):
-    """Return all knockout fixtures with current status and scores."""
+    """Return all knockout fixtures with current status, scores and model probabilities."""
     matches = db.query(Match).order_by(Match.id).all()
-    return [
-        MatchResponse(
-            id=m.id,
-            home_team=m.home_team,
-            away_team=m.away_team,
-            match_date=m.match_date.isoformat(),
-            stage=_stage_label(m.id),
-            status=m.status or "upcoming",
-            home_score=m.home_score,
-            away_score=m.away_score,
+    return [_to_match_response(m) for m in matches]
+
+
+@router.get("/matches/round", response_model=list[MatchResponse])
+def get_matches_by_round(round: str, db: Session = Depends(get_db)):
+    """Return fixtures for a single stage, e.g. /matches/round?round=R16."""
+    id_range = STAGE_ID_RANGES.get(round)
+    if id_range is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"round must be one of {list(STAGE_ID_RANGES)}",
         )
-        for m in matches
-    ]
+    matches = (
+        db.query(Match)
+        .filter(Match.id >= id_range.start, Match.id < id_range.stop)
+        .order_by(Match.id)
+        .all()
+    )
+    return [_to_match_response(m) for m in matches]
+
+
+def _is_locked_for_predictions(match: Match) -> bool:
+    """Predictions close when the match is locked/live/final or kickoff has passed."""
+    if match.is_locked or (match.status or "upcoming") != "upcoming":
+        return True
+    kickoff = match.match_date
+    if kickoff is not None:
+        if kickoff.tzinfo is None:
+            kickoff = kickoff.replace(tzinfo=timezone.utc)
+        if kickoff <= datetime.now(timezone.utc):
+            return True
+    return False
 
 
 @router.post("/user/predict", response_model=UserPredictResponse)
@@ -175,7 +253,7 @@ def user_predict(request: UserPredictRequest, db: Session = Depends(get_db)):
     match = db.query(Match).filter(Match.id == request.match_id).first()
     if not match:
         raise HTTPException(status_code=404, detail="Match not found")
-    if match.is_locked:
+    if _is_locked_for_predictions(match):
         raise HTTPException(status_code=409, detail="Match is locked — predictions closed at kickoff")
 
     user = db.query(User).filter(User.username == request.username).first()

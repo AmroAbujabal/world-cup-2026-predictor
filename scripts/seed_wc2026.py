@@ -221,20 +221,10 @@ def seed_r32(matches: list[dict], dry_run: bool) -> int:
 
 
 def _score_predictions(db, match, home_score: int, away_score: int):
-    actual = "home_win" if home_score > away_score else \
-             "away_win" if home_score < away_score else "draw"
-    unscored = db.query(UserPrediction).filter(
-        UserPrediction.match_id == match.id,
-        UserPrediction.points_awarded.is_(None),
-    ).all()
-    for pred in unscored:
-        pts = 3 if pred.predicted_outcome == actual else 0
-        pred.points_awarded = pts
-        user = db.query(User).filter(User.id == pred.user_id).first()
-        if user:
-            user.total_points += pts
-    if unscored:
-        print(f"     → scored {len(unscored)} predictions (actual: {actual})")
+    from backend.services.scoring import score_match
+    actual, scored = score_match(db, match, home_score, away_score)
+    if scored:
+        print(f"     → scored {scored} predictions (actual: {actual})")
 
 
 # ── Step 3: Clear model cache ─────────────────────────────────────────────────

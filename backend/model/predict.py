@@ -6,6 +6,17 @@ from backend.model.features import load_data, build_features
 from backend.model.train import train_model
 
 
+# DB / frontend spelling -> canonical spelling used in results.csv (for ELO/form/H2H lookup)
+CSV_ALIASES = {
+    "USA": "United States",
+    "Curacao": "Curaçao",
+}
+
+
+def _canonical(name: str) -> str:
+    return CSV_ALIASES.get(name, name)
+
+
 @dataclass
 class MatchPrediction:
     home_team: str
@@ -76,11 +87,13 @@ class PredictorService:
         return hw, d, aw
 
     def predict(self, home_team: str, away_team: str, neutral: bool = True) -> MatchPrediction:
-        h_elo = self._current_elo.get(home_team, 1500.0)
-        a_elo = self._current_elo.get(away_team, 1500.0)
-        h_form = self._current_form.get(home_team, 0.0)
-        a_form = self._current_form.get(away_team, 0.0)
-        h2h_hw, h2h_d, h2h_aw = self._get_h2h(home_team, away_team)
+        # Look ELO/form/H2H up under the CSV's canonical names, but echo the caller's names back.
+        h_key, a_key = _canonical(home_team), _canonical(away_team)
+        h_elo = self._current_elo.get(h_key, 1500.0)
+        a_elo = self._current_elo.get(a_key, 1500.0)
+        h_form = self._current_form.get(h_key, 0.0)
+        a_form = self._current_form.get(a_key, 0.0)
+        h2h_hw, h2h_d, h2h_aw = self._get_h2h(h_key, a_key)
 
         X = pd.DataFrame([{
             'elo_diff': h_elo - a_elo,

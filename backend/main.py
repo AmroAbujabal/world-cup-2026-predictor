@@ -21,8 +21,16 @@ def _migrate_db():
     """Add new columns to existing SQLite DBs without Alembic."""
     with engine.connect() as conn:
         for col, defn in [
-            ("status",      "VARCHAR DEFAULT 'upcoming'"),
-            ("external_id", "INTEGER"),
+            ("status",             "VARCHAR DEFAULT 'upcoming'"),
+            ("external_id",        "INTEGER"),
+            ("went_to_penalties",  "BOOLEAN"),
+            ("penalty_home",       "INTEGER"),
+            ("penalty_away",       "INTEGER"),
+            ("went_to_extra_time", "BOOLEAN"),
+            ("is_upset",           "BOOLEAN"),
+            ("prob_home",          "REAL"),
+            ("prob_draw",          "REAL"),
+            ("prob_away",          "REAL"),
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE matches ADD COLUMN {col} {defn}"))

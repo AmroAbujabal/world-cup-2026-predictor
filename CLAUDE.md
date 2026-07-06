@@ -31,12 +31,15 @@ cd frontend && vercel --prod
 - Vercel alias: https://frontend-nine-alpha-56.vercel.app
 - VITE_API_URL is set in Vercel project env (production + preview)
 
-## Tournament state (as of Jun 29 2026)
+## Tournament state (as of Jul 6 2026)
 
-- Group stage complete (all 72 matches seeded into results.csv)
-- R32 in progress: Match 1 (South Africa 0–1 Canada) and Match 2 (Brazil 2–1 Japan) are FINAL
-- Match 3 (Germany vs Paraguay) is LIVE
-- Matches 4–16 are upcoming
+- Group stage complete (all 72 matches in results.csv); R32 complete (all 16, ids 1–16 FINAL)
+- R16 underway (ids 17–24). FINAL: France 1–0 Paraguay (17), Morocco 3–0 Canada (18),
+  Norway 2–0 Brazil (19, upset), England 3–2 Mexico (20). Upcoming: 21–24.
+- Canada eliminated by Morocco in R16 (first team out) — shown via a Banner on `/`.
+- Three R32 penalty ties are stored as 1–1 + shootout: id 3 (Paraguay bt Germany),
+  id 4 (Morocco bt Netherlands), id 14 (Egypt bt Australia). `is_upset` on ids 14, 15, 19.
+- Re-seed / advance with `python scripts/seed_r16.py [--dry-run]` (idempotent).
 
 ## Architecture notes
 
@@ -60,19 +63,44 @@ ADMIN_TOKEN=<secret>                             # protects /admin/* endpoints
 DATABASE_URL=sqlite:///./dev.db                  # default
 ```
 
+## Data model additions (Match)
+
+- Penalty/upset: `went_to_penalties`, `penalty_home`, `penalty_away`, `went_to_extra_time`, `is_upset`
+- Stored model probabilities: `prob_home`, `prob_draw`, `prob_away`
+- All nullable; added idempotently in `_migrate_db()` (main.py) — no Alembic.
+- **Penalty policy:** penalty ties are stored as their level 1–1 score, so predictions score as a
+  DRAW; `penalty_home/away` only advance the bracket + drive the "(x–y pens)" display.
+
+## Scoring
+
+- Single source of truth: `backend/services/scoring.py::score_match(db, match, home, away, ...)`.
+  Called by `/admin/update-result`, `/results`, the poller, and the seed scripts (no duplication).
+- `backend/services/results_csv.py::append_result(...)` appends finished results to results.csv
+  (canonical names via CSV_NAME_MAP, deduped by date+teams) for the ELO/form retrain.
+
 ## Admin endpoints (require X-Admin-Token header)
 
-- `POST /admin/update-result` — body: `{match_id, home_score, away_score}` — scores predictions, marks match final
+- `POST /admin/update-result` — body: `{match_id, home_score, away_score, penalty_home?, penalty_away?, went_to_extra_time?}`
+  — atomic: score save → append to results.csv → score predictions → leaderboard → clear model cache
 - `POST /admin/set-live` — body: `{match_id}` — marks a match as live
 - `POST /admin/retrain` — clears model cache so it retrains on next /predict call
 
-## Routes
+## Public API endpoints (predictions/users routers)
 
-- `/` — GroupStage (landing page / compete flow)
-- `/groups` — GroupStage alias
-- `/bracket` — BracketChallenge (knockout bracket with live scores)
+- `GET /matches` — all knockout fixtures (incl. probs, penalties, is_upset)
+- `GET /matches/round?round=R16` — fixtures for one stage (R32|R16|QF|SF|Final)
+- `GET /user/{username}/predictions` — a user's picks vs actual result + points (feeds "My Predictions")
+- `GET /leaderboard` — entries now include `total_predictions` (for Correct/Total + AI-accuracy compare)
+
+## Routes (frontend)
+
+- `/` — BracketChallenge (landing; live knockout bracket). `/groups` and `/bracket` redirect to `/`.
 - `/analysis` — Analysis (ML research writeup)
+- `/my-predictions` — MyPredictions (per-user picks vs results)
 - `/leaderboard` — Leaderboard
+- GroupStage.jsx exists but is unrouted (its localStorage picks are still read by BracketChallenge).
+- UI: broadcast-scorecard theme — Barlow Condensed (display) + Instrument Sans (body) via @fontsource;
+  green (home) / slate (draw) / sky (away) 3-way probability bars; cards lock at kickoff/live.
 
 ## Key files
 

@@ -89,3 +89,10 @@ def retrain(_: None = Depends(_verify_token)):
     from backend.routes.predictions import get_predictor
     get_predictor.cache_clear()
     return {"status": "cache cleared — model retrains on next /predict call"}
+
+
+@router.post("/sync")
+def sync(_: None = Depends(_verify_token)):
+    """Pull live results from football-data.org and bring the whole bracket current."""
+    from backend.services.sync_service import run_sync
+    return run_sync()

@@ -11,7 +11,10 @@ load_dotenv()
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _DEFAULT_DB = f"sqlite:///{os.path.join(_REPO_ROOT, 'dev.db')}"
 
-DATABASE_URL = os.getenv("DATABASE_URL", _DEFAULT_DB)
+
+# .strip() guards against a trailing space/newline pasted into the host's env var
+# (e.g. "...sslmode=require " → psycopg2 "invalid sslmode value").
+DATABASE_URL = os.getenv("DATABASE_URL", _DEFAULT_DB).strip()
 
 # Neon / Render / Heroku hand out `postgres://` URLs; SQLAlchemy 2.0 needs `postgresql://`.
 if DATABASE_URL.startswith("postgres://"):

@@ -1,0 +1,23 @@
+name: sync-results
+
+# Free replacement for the always-on poller: ping the backend's /admin/sync every
+# ~10 min so the bracket stays current even while the free host is spun down.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger backend sync
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          ADMIN_TOKEN: ${{ secrets.ADMIN_TOKEN }}
+        run: |
+          # Free hosts cold-start (+model train), so allow a long timeout and retries
+          curl -fsS -X POST "$BACKEND_URL/admin/sync" \
+            -H "X-Admin-Token: $ADMIN_TOKEN" \
+            --max-time 180 --retry 3 --retry-delay 25 --retry-connrefused \
+            && echo "sync ok" || echo "sync failed (backend may be waking up)"

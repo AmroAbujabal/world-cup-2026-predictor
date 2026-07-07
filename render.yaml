@@ -1,0 +1,21 @@
+# Render Blueprint — free web service for the FastAPI backend.
+# Deploy: Render dashboard → New → Blueprint → pick this repo. Then set the three
+# `sync: false` env vars (DATABASE_URL from Neon, your football-data key, an admin token).
+services:
+  - type: web
+    name: wc2026-predictor-api
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DATABASE_URL
+        sync: false # ← paste your Neon connection string
+      - key: FOOTBALL_DATA_API_KEY
+        sync: false # ← your football-data.org key
+      - key: ADMIN_TOKEN
+        sync: false # ← must match the GitHub ADMIN_TOKEN secret

@@ -1,11 +1,10 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-// Self-hosted sport/esport type pairing (CSP-safe, no runtime network)
-import "@fontsource/russo-one/400.css";
-import "@fontsource/chakra-petch/400.css";
-import "@fontsource/chakra-petch/500.css";
-import "@fontsource/chakra-petch/600.css";
-import "@fontsource/chakra-petch/700.css";
+// Clean, minimal humanist sans (CSP-safe, self-hosted)
+import "@fontsource/instrument-sans/400.css";
+import "@fontsource/instrument-sans/500.css";
+import "@fontsource/instrument-sans/600.css";
+import "@fontsource/instrument-sans/700.css";
 import "./index.css";
 import App from "./App.jsx";
 

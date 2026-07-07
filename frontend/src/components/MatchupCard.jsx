@@ -33,13 +33,13 @@ function StatusBar({
 }) {
   if (status === "final" && homeScore != null) {
     return (
-      <div className="px-3 py-1.5 pitch-deep flex items-center justify-between">
-        <span className="text-[10px] font-bold tracking-widest text-emerald-300/80">
+      <div className="px-3 py-1.5 bg-pitch-700 flex items-center justify-between">
+        <span className="text-[10px] font-bold tracking-widest text-white/70">
           FULL TIME
         </span>
         <span className="font-display text-base text-white nums leading-none">
           {homeScore}
-          <span className="text-emerald-400 mx-0.5">–</span>
+          <span className="text-gold-400 mx-0.5">–</span>
           {awayScore}
           {wentToPenalties && penaltyHome != null && (
             <span className="text-gold-400 font-sans text-[10px] ml-1 align-middle">
@@ -135,7 +135,7 @@ export default function MatchupCard({
 
   if (!team1 && !team2)
     return (
-      <div className="w-44 rounded-2xl border-2 border-dashed border-emerald-200 bg-white/50 p-4 grid place-items-center text-[11px] font-bold text-emerald-300 tracking-widest h-[92px]">
+      <div className="w-44 rounded-2xl border-2 border-dashed border-slate-200 bg-white/50 p-4 grid place-items-center text-[11px] font-bold text-slate-300 tracking-widest h-[92px]">
         TBD
       </div>
     );

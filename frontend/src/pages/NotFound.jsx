@@ -9,7 +9,7 @@ export default function NotFound() {
       <p className="text-slate-500 mb-8 text-sm">That URL doesn't exist. Head back to the predictor.</p>
       <Link
         to="/"
-        className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-500 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm"
+        className="inline-flex items-center gap-2 bg-pitch-700 hover:bg-pitch-600 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm"
       >
         Back to Group Stage
       </Link>

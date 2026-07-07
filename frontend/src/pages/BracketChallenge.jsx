@@ -112,7 +112,7 @@ function ModelBanner() {
     <div className="border border-slate-200 rounded-2xl bg-white p-6 mb-8 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="max-w-lg">
-          <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">
+          <p className="text-xs font-bold uppercase tracking-widest text-pitch-700 mb-1">
             Powered by ML
           </p>
           <h2 className="text-lg font-bold text-slate-900 mb-2">
@@ -132,7 +132,7 @@ function ModelBanner() {
               key={s.label}
               className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-center min-w-[90px]"
             >
-              <div className="text-lg font-bold text-green-600">{s.value}</div>
+              <div className="text-lg font-bold text-pitch-700">{s.value}</div>
               <div className="text-[11px] text-slate-400 mt-0.5">{s.label}</div>
             </div>
           ))}
@@ -450,7 +450,7 @@ export default function BracketChallenge() {
             <br />
             <span className="text-gold-400">FINAL</span>
           </h1>
-          <p className="text-emerald-100/80 text-sm max-w-xl">
+          <p className="text-pitch-100/80 text-sm max-w-xl">
             Call every knockout match, R32 to the trophy. The AI model posts
             live Win / Draw / Loss odds — beat it, and beat your friends. Scores
             refresh every 60s.
@@ -476,7 +476,7 @@ export default function BracketChallenge() {
       {/* R16 AI Predictions panel */}
       {r16Predictions && (
         <div className="max-w-5xl mx-auto mb-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-widest text-amber-600 mb-1">
+          <p className="text-xs font-bold uppercase tracking-widest text-gold-600 mb-1">
             AI Simulation
           </p>
           <h2 className="text-lg font-bold text-slate-900 mb-4">
@@ -490,7 +490,7 @@ export default function BracketChallenge() {
               >
                 <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
                   <span
-                    className={`font-medium truncate ${m.predicted_winner === m.team1 ? "text-green-700 font-bold" : "text-slate-500"}`}
+                    className={`font-medium truncate ${m.predicted_winner === m.team1 ? "text-pitch-700 font-bold" : "text-slate-500"}`}
                   >
                     {m.team1}
                   </span>
@@ -500,7 +500,7 @@ export default function BracketChallenge() {
                 </div>
                 <div className="flex items-center justify-between px-3 py-2">
                   <span
-                    className={`font-medium truncate ${m.predicted_winner === m.team2 ? "text-green-700 font-bold" : "text-slate-500"}`}
+                    className={`font-medium truncate ${m.predicted_winner === m.team2 ? "text-pitch-700 font-bold" : "text-slate-500"}`}
                   >
                     {m.team2}
                   </span>
@@ -512,8 +512,8 @@ export default function BracketChallenge() {
             ))}
           </div>
           <p className="text-xs text-slate-400 mt-3">
-            Predicted winners in bold green — based on who AI expects to win
-            each R32 match.
+            Predicted winners in bold blue — based on who AI expects to win each
+            R32 match.
           </p>
         </div>
       )}
@@ -531,14 +531,14 @@ export default function BracketChallenge() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           disabled={submitted}
-          className="bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 placeholder:text-slate-400"
+          className="bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-pitch-600 disabled:opacity-50 placeholder:text-slate-400"
         />
 
         {/* Progress bar */}
         <div className="flex items-center gap-2 flex-1 min-w-48">
           <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-green-500 rounded-full transition-all"
+              className="h-full bg-pitch-600 rounded-full transition-all"
               style={{ width: `${(totalPicks / TOTAL_MATCHUPS) * 100}%` }}
             />
           </div>
@@ -548,7 +548,7 @@ export default function BracketChallenge() {
         </div>
 
         {champion && (
-          <span className="text-sm font-bold text-amber-700 bg-amber-100 border border-amber-300 px-3 py-1 rounded-lg">
+          <span className="text-sm font-bold text-gold-700 bg-gold-100 border border-gold-300 px-3 py-1 rounded-lg">
             {champion}
           </span>
         )}
@@ -559,12 +559,12 @@ export default function BracketChallenge() {
             disabled={
               submitting || totalPicks < TOTAL_MATCHUPS || !username.trim()
             }
-            className="bg-green-600 hover:bg-green-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap cursor-pointer disabled:cursor-not-allowed"
+            className="bg-pitch-700 hover:bg-pitch-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap cursor-pointer disabled:cursor-not-allowed"
           >
             {submitting ? "Submitting…" : "Submit Bracket"}
           </button>
         ) : (
-          <div className="flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-100 border border-green-300 px-3 py-2 rounded-xl">
+          <div className="flex items-center gap-2 text-sm font-semibold text-pitch-700 bg-pitch-100 border border-pitch-300 px-3 py-2 rounded-xl">
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none">
               <path
                 d="M3 8l3.5 3.5L13 4.5"
@@ -582,12 +582,12 @@ export default function BracketChallenge() {
 
       {/* Submitted confirmation banner */}
       {submitted && (
-        <div className="max-w-5xl mx-auto mb-6 bg-green-50 border border-green-300 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto mb-6 bg-pitch-50 border border-pitch-300 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-bold text-green-800 mb-0.5">
+            <p className="text-sm font-bold text-pitch-800 mb-0.5">
               Your bracket is submitted!
             </p>
-            <p className="text-xs text-green-700">
+            <p className="text-xs text-pitch-700">
               Predictions are locked in as{" "}
               <span className="font-semibold">{username}</span>.
               {champion && (
@@ -603,13 +603,13 @@ export default function BracketChallenge() {
           <div className="flex items-center gap-2 shrink-0">
             <Link
               to="/my-predictions"
-              className="text-xs font-bold text-green-700 border border-green-400 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+              className="text-xs font-bold text-pitch-700 border border-pitch-400 hover:bg-pitch-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
             >
               My predictions →
             </Link>
             <Link
               to="/leaderboard"
-              className="text-xs font-bold text-green-700 border border-green-400 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+              className="text-xs font-bold text-pitch-700 border border-pitch-400 hover:bg-pitch-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
             >
               Leaderboard →
             </Link>
@@ -660,13 +660,13 @@ export default function BracketChallenge() {
               <div
                 className={`w-44 rounded-xl border-2 p-5 text-center transition-all ${
                   champion
-                    ? "border-amber-400 bg-amber-50 shadow-[0_4px_20px_rgba(251,191,36,0.25)]"
+                    ? "border-gold-400 bg-gold-50 shadow-[0_4px_20px_rgba(251,191,36,0.25)]"
                     : "border-slate-200 bg-white"
                 }`}
               >
                 <div className="text-3xl mb-2">🏆</div>
                 <div
-                  className={`text-sm font-bold leading-snug ${champion ? "text-amber-700" : "text-slate-400"}`}
+                  className={`text-sm font-bold leading-snug ${champion ? "text-gold-700" : "text-slate-400"}`}
                 >
                   {champion || "TBD"}
                 </div>

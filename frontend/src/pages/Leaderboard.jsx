@@ -28,7 +28,7 @@ export default function Leaderboard() {
 
   return (
     <div className="max-w-3xl mx-auto reveal">
-      <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">
+      <p className="text-xs font-bold uppercase tracking-widest text-pitch-700 mb-1">
         Round of 16 · Live
       </p>
       <h1 className="font-display text-4xl font-bold mb-1 text-slate-900 tracking-tight">
@@ -36,7 +36,7 @@ export default function Leaderboard() {
       </h1>
       <p className="text-slate-500 mb-6 text-sm">
         Ranked by total points.{" "}
-        <span className="text-sky-700 font-medium">Accuracy</span> is correct
+        <span className="text-pitch-700 font-medium">Accuracy</span> is correct
         outcomes out of matches scored — beat the AI's{" "}
         {Math.round(AI_ACCURACY * 100)}%.
       </p>
@@ -75,7 +75,7 @@ export default function Leaderboard() {
                   return (
                     <tr
                       key={entry.rank}
-                      className="border-b border-slate-100 hover:bg-green-50/50 transition-colors"
+                      className="border-b border-slate-100 hover:bg-pitch-50/50 transition-colors"
                     >
                       <td className="px-5 py-4 text-slate-500 font-display text-base">
                         {MEDALS[entry.rank] ?? `#${entry.rank}`}
@@ -85,11 +85,11 @@ export default function Leaderboard() {
                       </td>
                       <td className="px-5 py-4 text-right">
                         {hasScores ? (
-                          <span className="text-green-600 font-bold nums">
+                          <span className="text-pitch-700 font-bold nums">
                             {entry.total_points} pts
                           </span>
                         ) : (
-                          <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full">
+                          <span className="text-xs font-semibold text-pitch-700 bg-pitch-100 px-2 py-0.5 rounded-full">
                             Submitted
                           </span>
                         )}
@@ -104,7 +104,7 @@ export default function Leaderboard() {
                           <span className="text-slate-300">—</span>
                         ) : (
                           <span
-                            className={`font-bold ${beatsAI ? "text-green-600" : "text-slate-500"}`}
+                            className={`font-bold ${beatsAI ? "text-pitch-700" : "text-slate-500"}`}
                           >
                             {acc}%
                           </span>
@@ -114,23 +114,23 @@ export default function Leaderboard() {
                   );
                 })}
                 {/* AI baseline — the model users are competing against */}
-                <tr className="bg-sky-50/70 border-t-2 border-sky-200">
-                  <td className="px-5 py-4 text-sky-500 font-display text-base">
+                <tr className="bg-pitch-50/70 border-t-2 border-pitch-200">
+                  <td className="px-5 py-4 text-pitch-600 font-display text-base">
                     AI
                   </td>
-                  <td className="px-5 py-4 font-semibold text-sky-800 font-display text-base flex items-center gap-2">
+                  <td className="px-5 py-4 font-semibold text-pitch-800 font-display text-base flex items-center gap-2">
                     XGBoost model
-                    <span className="text-[9px] font-bold uppercase tracking-widest bg-sky-100 text-sky-600 px-1.5 py-0.5 rounded-full">
+                    <span className="text-[9px] font-bold uppercase tracking-widest bg-pitch-100 text-pitch-700 px-1.5 py-0.5 rounded-full">
                       baseline
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-right text-sky-400 text-xs">
+                  <td className="px-5 py-4 text-right text-pitch-400 text-xs">
                     —
                   </td>
-                  <td className="px-5 py-4 text-right text-sky-400 text-xs">
+                  <td className="px-5 py-4 text-right text-pitch-400 text-xs">
                     historical
                   </td>
-                  <td className="px-5 py-4 text-right nums font-bold text-sky-700">
+                  <td className="px-5 py-4 text-right nums font-bold text-pitch-700">
                     {Math.round(AI_ACCURACY * 100)}%
                   </td>
                 </tr>

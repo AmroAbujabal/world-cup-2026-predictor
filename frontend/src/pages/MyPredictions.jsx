@@ -73,7 +73,7 @@ export default function MyPredictions() {
 
   return (
     <div className="max-w-2xl mx-auto reveal">
-      <p className="text-xs font-bold uppercase tracking-widest text-green-600 mb-1">
+      <p className="text-xs font-bold uppercase tracking-widest text-pitch-700 mb-1">
         Round of 16 · Live
       </p>
       <h1 className="font-display text-4xl font-bold mb-1 text-slate-900 tracking-tight">
@@ -88,11 +88,11 @@ export default function MyPredictions() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Your username"
-          className="bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-green-500 placeholder:text-slate-400"
+          className="bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-pitch-600 placeholder:text-slate-400"
         />
         <button
           type="submit"
-          className="bg-green-600 hover:bg-green-500 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors"
+          className="bg-pitch-700 hover:bg-pitch-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-colors"
         >
           Load
         </button>
@@ -104,7 +104,7 @@ export default function MyPredictions() {
           <p className="text-slate-500 text-sm mb-3">{error}</p>
           <Link
             to="/"
-            className="text-sm font-bold text-green-700 border border-green-300 hover:bg-green-50 px-4 py-2 rounded-lg transition-colors"
+            className="text-sm font-bold text-pitch-700 border border-pitch-300 hover:bg-pitch-50 px-4 py-2 rounded-lg transition-colors"
           >
             Make your picks →
           </Link>
@@ -119,7 +119,7 @@ export default function MyPredictions() {
               {
                 label: "Total points",
                 value: data.total_points,
-                tone: "text-green-600",
+                tone: "text-pitch-700",
               },
               {
                 label: "Correct",
@@ -131,7 +131,7 @@ export default function MyPredictions() {
                 value: scored.length
                   ? `${Math.round((correct / scored.length) * 100)}%`
                   : "—",
-                tone: "text-sky-600",
+                tone: "text-pitch-700",
               },
             ].map((s) => (
               <div
@@ -204,7 +204,7 @@ export default function MyPredictions() {
                     {pending ? (
                       <Badge tone="slate">Pending</Badge>
                     ) : correctPick ? (
-                      <span className="font-display text-lg font-bold text-green-600 nums">
+                      <span className="font-display text-lg font-bold text-pitch-700 nums">
                         +{p.points_awarded}
                       </span>
                     ) : (

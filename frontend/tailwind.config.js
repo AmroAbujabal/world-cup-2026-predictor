@@ -4,30 +4,48 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // Russo One = bold sport/esport impact display; Chakra Petch = techy UI/body
-        display: ['"Russo One"', "ui-sans-serif", "system-ui", "sans-serif"],
-        sans: ['"Chakra Petch"', "ui-sans-serif", "system-ui", "sans-serif"],
+        // Single clean family — minimal, portfolio-grade
+        display: [
+          '"Instrument Sans"',
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
+        sans: ['"Instrument Sans"', "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
-        // World Cup brand — pitch green, gold trophy, electric accent
+        // FIFA 2026 palette: near-monochrome black + white + GOLD (institutional).
+        // Token names kept stable: pitch = deep brass-gold accent, gold = bright
+        // trophy gold, electric = same gold family (legacy "away" usage).
         pitch: {
-          950: "#032217",
-          900: "#053825",
-          800: "#065f36",
-          700: "#047857",
-          600: "#059669",
-          500: "#10b981",
-          400: "#34d399",
+          50: "#faf7ee",
+          100: "#f2e9cf",
+          200: "#e6d29b",
+          300: "#d7b968",
+          400: "#c9a24b",
+          500: "#b1863a",
+          600: "#916b2c",
+          700: "#785a27",
+          800: "#5f471f",
+          900: "#493716",
+          950: "#2e230d",
         },
         gold: {
-          500: "#f59e0b",
-          400: "#fbbf24",
-          300: "#fcd34d",
+          50: "#fbf8ec",
+          100: "#f7efd0",
+          200: "#efdca0",
+          300: "#e6c86f",
+          400: "#dab84e",
+          500: "#cda63c",
+          600: "#b58a2f",
+          700: "#8f6b28",
+          800: "#6f5321",
+          900: "#574019",
         },
         electric: {
-          600: "#2563eb",
-          500: "#3b82f6",
-          400: "#60a5fa",
+          600: "#b58a2f",
+          500: "#cda63c",
+          400: "#dab84e",
         },
       },
       keyframes: {

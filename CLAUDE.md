@@ -17,19 +17,20 @@ cd frontend && npm run dev -- --port 5200
 # (5173 may be occupied by another project)
 ```
 
-## Deployment
+## Deployment (free stack — migrated off Railway when its trial expired, Jul 2026)
 
-```bash
-# Backend — set FOOTBALL_DATA_API_KEY and ADMIN_TOKEN in Railway env vars first
-railway up --service world-cup-2026-predictor
-
-# Frontend
-cd frontend && vercel --prod
-```
-
-- Railway URL: https://world-cup-2026-predictor-production.up.railway.app
-- Vercel alias: https://frontend-nine-alpha-56.vercel.app
-- VITE_API_URL is set in Vercel project env (production + preview)
+- **Frontend:** Vercel — https://frontend-nine-alpha-56.vercel.app (`cd frontend && vercel --prod`).
+  `VITE_API_URL` (prod env) points at the Render backend; Vite bakes it at build → redeploy after changing.
+- **Backend:** Render free web service — https://wc2026-predictor-api-5qvg.onrender.com
+  (Blueprint `render.yaml`; auto-deploys on push to main). Free tier sleeps after ~15 min idle (cold start
+  ~40–60s + model retrain). Env: `DATABASE_URL` (Neon), `FOOTBALL_DATA_API_KEY`, `ADMIN_TOKEN`.
+- **Database:** Neon free Postgres (persistent). App normalizes `postgres://`→`postgresql://` and strips
+  whitespace from `DATABASE_URL` (a trailing space breaks psycopg2 sslmode).
+- **Auto-updates:** `.github/workflows/sync.yml` cron every 10 min → `POST /admin/sync` (X-Admin-Token =
+  GitHub secret `ADMIN_TOKEN`; also secret `BACKEND_URL`). The in-process poller still runs when the
+  instance is awake; the cron covers spin-down. No manual score entry — `sync_service.run_sync()` pulls the
+  whole bracket from football-data.org and upserts everything.
+- Old Railway URL (dead): world-cup-2026-predictor-production.up.railway.app
 
 ## Tournament state (as of Jul 6 2026)
 

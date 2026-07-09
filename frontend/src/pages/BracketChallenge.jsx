@@ -512,7 +512,7 @@ export default function BracketChallenge() {
             ))}
           </div>
           <p className="text-xs text-slate-400 mt-3">
-            Predicted winners in bold blue — based on who AI expects to win each
+            Predicted winners in bold gold — based on who AI expects to win each
             R32 match.
           </p>
         </div>

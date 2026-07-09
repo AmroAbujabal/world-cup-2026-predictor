@@ -206,8 +206,8 @@ export default function Analysis() {
             "XGBoost",
             "FastAPI",
             "React 18",
-            "PostgreSQL",
-            "Railway",
+            "Neon Postgres",
+            "Render",
             "Vercel",
           ].map((tag) => (
             <span
@@ -248,8 +248,8 @@ export default function Analysis() {
         <p className="text-slate-600 text-base leading-relaxed mb-6">
           The system is split into three layers: a Python ML pipeline, a FastAPI
           REST API, and a React single-page application. Each is independently
-          deployable, with the backend hosted on Railway and the frontend on
-          Vercel.
+          deployable, with the backend hosted on Render, the database on Neon,
+          and the frontend on Vercel.
         </p>
         <div className="grid sm:grid-cols-3 gap-3 mb-6">
           <ArchBox
@@ -268,7 +268,7 @@ export default function Analysis() {
             items={[
               "REST prediction API",
               "SQLAlchemy ORM",
-              "PostgreSQL (Railway)",
+              "PostgreSQL (Neon)",
               "Pydantic v2 schemas",
             ]}
           />
@@ -440,7 +440,7 @@ export default function Analysis() {
           &nbsp;&nbsp;n_jobs=<span className="text-yellow-300">1</span>
           &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           <span className="text-slate-500">
-            # single-threaded (Railway memory constraint)
+            # single-threaded (512 MB free-tier constraint)
           </span>
           <br />)
         </div>
@@ -512,8 +512,8 @@ export default function Analysis() {
         </p>
         <div className="flex flex-col gap-4">
           <ChallengeCard
-            title="Out-of-memory crash on Railway (512 MB limit)"
-            problem="The prediction service ran the feature pipeline twice — once to compute ELO/form/H2H, then again inside the training loop. With 49k rows and multiple intermediate DataFrames, peak RAM exceeded Railway's 512 MB container limit and the process was OOM-killed before the model finished training."
+            title="Out-of-memory crash on a 512 MB free tier"
+            problem="The prediction service ran the feature pipeline twice — once to compute ELO/form/H2H, then again inside the training loop. With 49k rows and multiple intermediate DataFrames, peak RAM exceeded the 512 MB free-tier container limit and the process was OOM-killed before the model finished training."
             solution="Refactored the pipeline to run once and return a single (X, y, enriched_df) tuple. Intermediate DataFrames are explicitly deleted (del df) before training. The enriched DataFrame is never stored — instead, final ELO ratings, form scores, and H2H records are extracted into compact dicts. Combined with category/int16 dtypes and n_jobs=1, peak RAM dropped ~60%."
           />
           <ChallengeCard
@@ -532,9 +532,9 @@ export default function Analysis() {
             solution="Added a _seed_matches() function called at startup that inserts all 31 WC knockout matches (IDs 1–31) into the database if the table is empty. Bracket matchup IDs (r32_1, r16_1, etc.) are mapped to stable DB IDs via a MATCH_ID_MAP constant, replacing the fragile idx+1 index. The endpoint was also converted to an upsert so re-submissions update picks rather than 409ing."
           />
           <ChallengeCard
-            title="Ephemeral SQLite database on Railway"
-            problem="Railway's filesystem is ephemeral — it resets on each deployment. Using SQLite meant every backend redeploy wiped all user submissions and the leaderboard, making the feature non-functional in production."
-            solution="The backend was architected from the start to read DATABASE_URL from the environment, switching between SQLite (dev) and PostgreSQL (production) automatically via SQLAlchemy's connection string detection. A managed PostgreSQL instance was provisioned on Railway and DATABASE_URL was injected as an environment variable — zero code changes required."
+            title="Ephemeral filesystem + a host migration mid-tournament"
+            problem="Free hosts have ephemeral filesystems that reset on every deploy, so SQLite meant each redeploy wiped all user submissions and the leaderboard. Worse, the original host's trial expired mid-tournament, taking the live backend and its database offline."
+            solution="The backend reads DATABASE_URL from the environment and switches between SQLite (dev) and PostgreSQL (prod) automatically via SQLAlchemy. Production Postgres now lives on Neon (persistent, serverless), the API on Render, with a GitHub Actions cron pinging a sync endpoint every 10 minutes — a fully free stack. Because DATABASE_URL is just an env var, moving hosts was a config change, not a code change; the data was migrated to Neon with zero schema edits."
           />
         </div>
       </Section>
@@ -735,7 +735,7 @@ export default function Analysis() {
             {
               layer: "Database",
               items:
-                "PostgreSQL (production, Railway) · SQLite (local dev) · psycopg2",
+                "PostgreSQL on Neon (production) · SQLite (local dev) · psycopg2",
             },
             {
               layer: "Frontend",
@@ -745,7 +745,7 @@ export default function Analysis() {
             {
               layer: "Deployment",
               items:
-                "Railway (backend + Postgres) · Vercel (frontend) · GitHub CI via git push",
+                "Render (backend) · Neon (Postgres) · Vercel (frontend) · GitHub Actions (CI + 10-min sync cron)",
             },
             {
               layer: "Dataset",
@@ -772,13 +772,13 @@ export default function Analysis() {
           <code className="bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-xs">
             main
           </code>{" "}
-          triggers automatic redeploys on both Railway and Vercel. The backend
-          rebuilds the Docker container, runs{" "}
+          triggers automatic redeploys on both Render and Vercel. Render
+          rebuilds the Python environment and runs{" "}
           <code className="bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono text-xs">
             _seed_matches()
           </code>{" "}
           on startup (idempotent — skips if rows already exist), and is live
-          within ~2 minutes. The frontend deploys in ~30 seconds via Vite's
+          within a few minutes. The frontend deploys in ~30 seconds via Vite's
           production build.
         </div>
       </Section>

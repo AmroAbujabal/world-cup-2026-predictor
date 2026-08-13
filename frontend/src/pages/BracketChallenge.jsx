@@ -84,9 +84,6 @@ const DB_ID_TO_SLOT = Object.fromEntries(
   Object.entries(MATCH_ID_MAP).map(([slot, id]) => [id, slot]),
 );
 
-// card height + gap ≈ 82px — used to compute vertical bracket spacing
-const CELL = 82;
-
 function buildEmptyRound(n, prefix) {
   return Array.from({ length: n }, (_, i) => ({
     id: `${prefix}_${i + 1}`,
@@ -414,12 +411,6 @@ export default function BracketChallenge() {
   const complete = !!realChampion;
   const champion = complete ? realChampion : picks[finalMatch?.id];
 
-  // Vertical spacing formula: each bracket level doubles the cell size
-  const bracketGap = (roundIdx) =>
-    roundIdx === 0 ? 6 : Math.pow(2, roundIdx) * CELL - 76;
-  const bracketPadTop = (roundIdx) =>
-    roundIdx === 0 ? 0 : (Math.pow(2, roundIdx) * CELL) / 2 - 38;
-
   return (
     <div className="max-w-none">
       {/* Hero */}
@@ -677,10 +668,7 @@ export default function BracketChallenge() {
 
       {/* Bracket — horizontally scrollable */}
       <div className="overflow-x-auto pb-8">
-        <div
-          className="flex gap-6 min-w-max px-4"
-          style={{ alignItems: "flex-start" }}
-        >
+        <div className="flex gap-6 w-max mx-auto px-4 items-stretch">
           {bracket.map((round, roundIdx) => (
             <div key={roundIdx} className="flex flex-col">
               {/* Round label */}
@@ -688,22 +676,21 @@ export default function BracketChallenge() {
                 {ROUNDS[roundIdx]}
               </div>
 
-              {/* Matchup cards with computed spacing */}
-              <div
-                className="flex flex-col"
-                style={{
-                  gap: `${bracketGap(roundIdx)}px`,
-                  paddingTop: `${bracketPadTop(roundIdx)}px`,
-                }}
-              >
+              {/* Every column is the same height (set by R32, the tallest), and each
+                  card centres in its equal share of it — so a round-N card always
+                  lands halfway between the two cards feeding it, whatever their
+                  height. Don't reintroduce a fixed card-height constant here: the
+                  cards grow with penalty footnotes and UPSET badges. */}
+              <div className="flex-1 flex flex-col gap-1.5">
                 {round.map((matchup) => (
-                  <MatchupCard
-                    key={matchup.id}
-                    matchup={matchup}
-                    onPick={handlePick}
-                    userPick={picks[matchup.id]}
-                    loadingProbs={!!loadingProbs[matchup.id]}
-                  />
+                  <div key={matchup.id} className="flex-1 flex items-center">
+                    <MatchupCard
+                      matchup={matchup}
+                      onPick={handlePick}
+                      userPick={picks[matchup.id]}
+                      loadingProbs={!!loadingProbs[matchup.id]}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -714,7 +701,7 @@ export default function BracketChallenge() {
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center w-44">
               Champion
             </div>
-            <div style={{ paddingTop: `${bracketPadTop(5)}px` }}>
+            <div className="flex-1 flex items-center">
               <div
                 className={`w-44 rounded-xl border-2 p-5 text-center transition-all ${
                   champion

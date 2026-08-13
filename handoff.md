@@ -65,11 +65,27 @@ sync-results`), which carries the right secret.
 
 ## Next steps
 
-- After the Render deploy lands, run `gh workflow run sync-results` and confirm match 24 flips to
-  `final` in prod (`GET /matches`) and `/model-performance` reports 31 matches.
-- Redeploy the frontend (`cd frontend && vercel --prod`) — Vite bakes `VITE_API_URL` at build time.
-- Optional tidy-ups: migrate `@app.on_event("startup")` to a lifespan handler; add the third-place
-  playoff as a 32nd slot if the bracket should be strictly complete; make the older tests roll back
-  like `tests/test_sync.py` so `dev.db` stops collecting fixture rows.
-- Portfolio (`~/portfolio`, `src/data/content.ts`) still owes an update with this project's finished
-  screenshots and the 26/31 result.
+Shipping is **done**: `08b23a2` is on main, Render redeployed, `gh workflow run sync-results` healed
+match 24, `vercel --prod` redeployed the frontend, and production was verified (31/31 final,
+`/model-performance` → 26/31). Nothing above is outstanding.
+
+### Next session: start here (user asked for all four, in this order)
+
+1. **Portfolio update** — `~/portfolio`, content lives in `src/data/content.ts`. Add this project's
+   finished state: Spain champions, model 26/31 (83.9%), the AI report card, and fresh screenshots of
+   `/` and `/bracket` from https://frontend-nine-alpha-56.vercel.app. Site is Tesla-style white
+   minimal; the user has rejected dark/ornate treatments as slop. Deploys GitHub → Vercel.
+2. **Third-place playoff as a 32nd slot** — football-data.org has it as `THIRD_PLACE`, fd id 537389,
+   France 4–6 England on 2026-07-18. Needs: `_seed_matches()` slot 32, `STAGE_SLOTS["THIRD_PLACE"] =
+range(32, 33)` in `sync_service.py`, `_stage_label()` (currently returns "Final" for any id > 30 —
+   fix that bound), the `Match.id <= 31` filter in `/model-performance`, and a bracket-page slot.
+   Users never predicted it, so leaderboard denominators stay at 31.
+3. **Lifespan migration** — `backend/main.py:149` still uses the deprecated `@app.on_event("startup")`
+   (seeds matches, runs `_migrate_db()`, launches the poller). Move to a `lifespan` context manager.
+4. **Test rollback hygiene** — `tests/test_scoring.py` and friends commit fixture rows into `dev.db`
+   (ids 32–36 are already in there). Give them the rollback fixture pattern from `tests/test_sync.py`.
+   Note this interacts with item 2: real match 32 vs leftover fixture rows at ids 32–36 — clear the
+   junk rows before seeding a third-place slot.
+
+Verify each with `python3 -m pytest tests/ -q` (~5 min, 50 passing now) plus
+`cd frontend && npm run lint && npm run build`.

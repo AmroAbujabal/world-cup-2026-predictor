@@ -3,8 +3,9 @@
 ## Goal
 
 Work the four follow-ups left when the tournament was closed out: third-place playoff as a
-32nd bracket slot, lifespan migration, test rollback hygiene, and the portfolio update. Plus
-one raised mid-session: the bracket page's round alignment was visibly broken.
+32nd bracket slot, lifespan migration, test rollback hygiene, and the portfolio update. The user
+asked for all four in one session rather than one each. Two more came up as we went: the bracket
+page's round alignment was visibly broken, and then its connector lines were requested.
 
 ## Current State
 
@@ -17,13 +18,21 @@ Everything below is **shipped and verified in production**.
   so the leaderboard denominators stay at 31 too. This was an explicit call — including it would
   read 26/32 (81.3%) since it's a miss.
 - **Bracket layout fixed** (see Changes Made #4) — rounds now line up with their feeders.
+- **Bracket connector lines drawn** (see Changes Made #5) — live, 31 SVG paths.
 - **Lifespan migration done**; the `on_event` deprecation warnings are gone from the test run.
 - **pytest no longer writes into `dev.db`.** A full suite run leaves it at 32 matches / 10 users /
   310 predictions.
-- Tests **51 passed** (was 50). Frontend lint + build clean.
-- Portfolio updated and pushed (`9bf96d0`), deploys GitHub → Vercel.
+- **Verified at final HEAD (`441db12`): `python3 -m pytest tests/ -q` → 51 passed in 4m39s**
+  (was 50 before this session); `dev.db` unchanged afterwards at 32/10/310, which re-confirms the
+  rollback fix. `cd frontend && npm run lint && npm run build` → both clean.
+- Prod re-checked: 32 matches all `final`, slot 32 correct, `/model-performance` → 26/31 (0.8387),
+  Brier 0.3665, champion Spain.
+- Portfolio updated, pushed and live at amrabujabal.com (served image is byte-identical to the
+  local file, so no stale CDN copy).
 
-Commits: `1007ca5` (the three backend/test items), `095c058` (bracket layout), portfolio `9bf96d0`.
+Commits this session: `1007ca5` (third-place slot + lifespan + test hygiene), `095c058` (bracket
+layout), `ea218d4` (handoff), `347bbaa` (connector lines), `441db12` (handoff). Portfolio `9bf96d0`.
+Both repos clean and in sync with `origin/main`.
 
 ## Active Files
 
@@ -31,7 +40,7 @@ Commits: `1007ca5` (the three backend/test items), `095c058` (bracket layout), p
 - `backend/services/sync_service.py` — `STAGE_SLOTS["THIRD_PLACE"]`
 - `backend/routes/predictions.py` — `_stage_label()` bound, `STAGE_ID_RANGES["3rd Place"]`
 - `backend/routes/users.py` — comment making the `id <= 31` scoping intentional
-- `frontend/src/pages/BracketChallenge.jsx` — third-place Banner, bracket layout
+- `frontend/src/pages/BracketChallenge.jsx` — third-place Banner, bracket layout, connector SVG
 - `tests/test_sync.py` (new third-place test), `tests/test_scoring.py`, `tests/test_main.py`
 - `~/portfolio/src/data/content.ts`, `~/portfolio/public/projects/world-cup-predictor.png`
 

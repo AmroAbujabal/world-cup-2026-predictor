@@ -139,6 +139,7 @@ function ArchBox({ label, items, color }) {
 
 export default function Analysis() {
   const [bracket, setBracket] = useState(null);
+  const [perf, setPerf] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -153,6 +154,10 @@ export default function Analysis() {
         setError("Failed to load predictions — is the backend running?");
         setLoading(false);
       });
+    axios
+      .get(`${API}/model-performance`)
+      .then((r) => setPerf(r.data))
+      .catch(() => {});
   }, []);
 
   return (
@@ -169,16 +174,17 @@ export default function Analysis() {
         <p className="text-slate-600 text-lg leading-relaxed max-w-2xl mb-8">
           An XGBoost classifier trained on{" "}
           <span className="text-slate-900 font-semibold">49,287</span>{" "}
-          international matches forecasts every knockout tie — served through a
-          FastAPI backend with an interactive bracket and a live leaderboard.
-          This is the write-up; the bracket is playable.
+          international matches called every knockout tie of the 2026 World Cup
+          — served through a FastAPI backend that tracked the bracket from the
+          Round of 32 to the trophy. This is the write-up; the finished bracket
+          and the model's scorecard are one click away.
         </p>
         <div className="flex flex-wrap items-center gap-4 mb-8">
           <Link
             to="/bracket"
             className="inline-flex items-center gap-2 bg-slate-900 hover:bg-pitch-700 text-white font-semibold px-6 py-3 rounded-full transition-colors text-sm"
           >
-            Play the bracket
+            See the final bracket
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
               <path
                 d="M3 8h10M9 4l4 4-4 4"
@@ -503,8 +509,120 @@ export default function Analysis() {
         </div>
       </Section>
 
+      {/* Live results */}
+      <Section number="6" title="2026 World Cup: How It Actually Did">
+        {!perf?.matches_scored ? (
+          <p className="text-slate-400 text-sm">
+            Results load from the live API.
+          </p>
+        ) : (
+          <>
+            <p className="text-slate-600 text-base leading-relaxed mb-6">
+              The backtest above is the honest offline number. This is the live
+              one: every knockout fixture of the 2026 tournament, scored against
+              the Win/Draw/Loss probabilities the model had stored{" "}
+              <span className="font-semibold text-slate-900">
+                before the result was recorded
+              </span>
+              . The sync prices a fixture as soon as its teams are known and
+              leaves that number alone once the match is scored, and a match
+              only enters the training data after it has been scored — so no
+              call here was made with knowledge of its own outcome.
+            </p>
+            <div className="grid grid-cols-3 gap-4 mb-5">
+              <StatCard
+                label="2026 WC Accuracy"
+                value={`${Math.round(perf.accuracy * 100)}%`}
+                sub={`${perf.matches_scored} knockout matches`}
+              />
+              <StatCard
+                label="Correct Calls"
+                value={`${perf.correct}/${perf.matches_scored}`}
+                sub={`vs ${Math.round(perf.random_baseline * 100)}% random`}
+              />
+              <StatCard
+                label="Brier Score"
+                value={perf.brier_score}
+                sub="0 = perfect, 2 = worst"
+              />
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-5">
+              <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                By round
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {perf.by_stage.map((st) => (
+                  <div
+                    key={st.stage}
+                    className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-center"
+                  >
+                    <div className="font-bold text-slate-900 nums">
+                      {st.correct}/{st.total}
+                    </div>
+                    <div className="text-xs text-slate-400">{st.stage}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {perf.misses.length > 0 && (
+              <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm mb-5">
+                <div className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                  Every miss
+                </div>
+                <ul className="text-sm text-slate-600 space-y-1.5">
+                  {perf.misses.map((m) => (
+                    <li key={m.match_id} className="flex justify-between gap-4">
+                      <span>
+                        <span className="text-slate-400 text-xs mr-1.5">
+                          {m.stage}
+                        </span>
+                        {m.home_team} {m.score} {m.away_team}
+                        {m.went_to_penalties && (
+                          <span className="text-slate-400 text-xs">
+                            {" "}
+                            — decided on penalties
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-xs text-slate-400 shrink-0 nums">
+                        {Math.round(m.confidence * 100)}% on the wrong side
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-sm text-slate-600 leading-relaxed space-y-2">
+              <p>
+                <span className="font-semibold text-slate-800">
+                  Read it with the sample size in mind:
+                </span>{" "}
+                {perf.matches_scored} matches is a small sample, and knockout
+                ties skew toward mismatches the model finds easy (a 33-point ELO
+                gap is easier to call than a group-stage coin flip). The 39.8%
+                backtest across 128 group-and-knockout matches remains the
+                defensible estimate of true skill; this run landed well above
+                it.
+              </p>
+              <p>
+                <span className="font-semibold text-slate-800">
+                  The misses are the interesting part:
+                </span>{" "}
+                the model's losses cluster on ties it rated close to even and on
+                matches that went to penalties, which the scoring policy records
+                as draws. Draws stay the hardest class live, exactly as the
+                backtest predicted.
+              </p>
+            </div>
+          </>
+        )}
+      </Section>
+
       {/* Engineering Challenges */}
-      <Section number="6" title="Engineering Challenges">
+      <Section number="7" title="Engineering Challenges">
         <p className="text-slate-600 text-base leading-relaxed mb-6">
           Building and deploying this system surfaced several non-trivial
           engineering problems. Solving them required debugging under production
@@ -540,7 +658,7 @@ export default function Analysis() {
       </Section>
 
       {/* Product Features */}
-      <Section number="7" title="Interactive Product">
+      <Section number="8" title="Interactive Product">
         <p className="text-slate-600 text-base leading-relaxed mb-6">
           Beyond the ML model, the project is a fully functional web application
           with three interactive phases — each backed by live API calls to the
@@ -611,7 +729,7 @@ export default function Analysis() {
       </Section>
 
       {/* Bracket Predictions */}
-      <Section number="8" title="Model's 2026 Bracket Predictions">
+      <Section number="9" title="Pre-tournament Bracket Simulation">
         <p className="text-slate-600 text-base leading-relaxed mb-8">
           The model simulates all 5 knockout rounds by advancing the team with
           the higher win probability at each matchup. All matches are treated as
@@ -668,12 +786,12 @@ export default function Analysis() {
             Your Turn
           </p>
           <h2 className="text-3xl font-extrabold text-slate-900 mb-3">
-            Think you can beat the model?
+            Could you have beaten the model?
           </h2>
           <p className="text-slate-600 text-base max-w-lg mx-auto leading-relaxed">
-            The model has made its picks. Follow the live bracket, submit your
-            own predictions for remaining matches, and see how you stack up as
-            results come in.
+            Every call is on the record: the odds the model posted before each
+            kickoff, the result that followed, and where the players who
+            submitted brackets finished against it.
           </p>
         </div>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -681,7 +799,7 @@ export default function Analysis() {
             to="/bracket"
             className="flex items-center gap-2 bg-slate-900 hover:bg-pitch-700 text-white font-semibold px-8 py-3.5 rounded-full transition-colors text-base"
           >
-            View live bracket
+            View the final bracket
             <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none">
               <path
                 d="M3 8h10M9 4l4 4-4 4"
@@ -701,9 +819,27 @@ export default function Analysis() {
         </div>
         <div className="mt-8 grid grid-cols-3 gap-4 text-center border-t border-pitch-200 pt-8">
           {[
-            { n: "32", label: "Teams remaining", sub: "R32 underway" },
-            { n: "29", label: "Matches to go", sub: "R32 → Final" },
-            { n: "39.8%", label: "Model accuracy", sub: "vs 33.3% baseline" },
+            {
+              n: perf?.champion?.team ?? "—",
+              label: "World champions",
+              sub: perf?.champion
+                ? `beat ${perf.champion.runner_up} ${perf.champion.score} in the final`
+                : "2026",
+            },
+            {
+              n: perf?.matches_scored
+                ? `${perf.correct}/${perf.matches_scored}`
+                : "31",
+              label: "Knockout calls right",
+              sub: "pre-kickoff probabilities",
+            },
+            {
+              n: perf?.matches_scored
+                ? `${Math.round(perf.accuracy * 100)}%`
+                : "39.8%",
+              label: "Model accuracy",
+              sub: "vs 33.3% baseline",
+            },
           ].map((s) => (
             <div key={s.label}>
               <div className="text-2xl font-extrabold text-pitch-700">
@@ -719,7 +855,7 @@ export default function Analysis() {
       </div>
 
       {/* Stack */}
-      <Section number="9" title="Tech Stack & Deployment">
+      <Section number="10" title="Tech Stack & Deployment">
         <div className="grid sm:grid-cols-2 gap-3">
           {[
             {

@@ -43,7 +43,7 @@ function Nav() {
           to="/bracket"
           className="text-[13px] font-semibold px-4 py-2 rounded-full bg-slate-900 text-white hover:bg-pitch-700 transition-colors"
         >
-          Play bracket
+          Final bracket
         </Link>
       </div>
     </nav>

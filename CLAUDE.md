@@ -4,7 +4,7 @@
 
 - **Backend:** FastAPI + SQLAlchemy (SQLite) + XGBoost, Python 3.12
 - **Frontend:** React 18 + Vite + Tailwind CSS v3 + React Router v6 + axios
-- **Deploy:** Railway (backend), Vercel (frontend)
+- **Deploy:** Render (backend), Neon (Postgres), Vercel (frontend)
 
 ## Running locally
 
@@ -26,34 +26,42 @@ cd frontend && npm run dev -- --port 5200
   ~40–60s + model retrain). Env: `DATABASE_URL` (Neon), `FOOTBALL_DATA_API_KEY`, `ADMIN_TOKEN`.
 - **Database:** Neon free Postgres (persistent). App normalizes `postgres://`→`postgresql://` and strips
   whitespace from `DATABASE_URL` (a trailing space breaks psycopg2 sslmode).
-- **Auto-updates:** `.github/workflows/sync.yml` cron every 10 min → `POST /admin/sync` (X-Admin-Token =
-  GitHub secret `ADMIN_TOKEN`; also secret `BACKEND_URL`). The in-process poller still runs when the
-  instance is awake; the cron covers spin-down. No manual score entry — `sync_service.run_sync()` pulls the
-  whole bracket from football-data.org and upserts everything.
+- **Auto-updates:** `.github/workflows/sync.yml` → `POST /admin/sync` (X-Admin-Token = GitHub secret
+  `ADMIN_TOKEN`; also secret `BACKEND_URL`). It ran on a 10-min cron through the tournament; the
+  schedule is now off and it is `workflow_dispatch`-only. `sync_service.run_sync()` pulls the whole
+  bracket from football-data.org and upserts everything — there is no manual score entry.
 - Old Railway URL (dead): world-cup-2026-predictor-production.up.railway.app
 
-## Tournament state (as of Jul 6 2026)
+## Tournament state — FINISHED (19 Jul 2026)
 
-- Group stage complete (all 72 matches in results.csv); R32 complete (all 16, ids 1–16 FINAL)
-- R16 underway (ids 17–24). FINAL: France 1–0 Paraguay (17), Morocco 3–0 Canada (18),
-  Norway 2–0 Brazil (19, upset), England 3–2 Mexico (20). Upcoming: 21–24.
-- Canada eliminated by Morocco in R16 (first team out) — shown via a Banner on `/`.
-- Three R32 penalty ties are stored as 1–1 + shootout: id 3 (Paraguay bt Germany),
-  id 4 (Morocco bt Netherlands), id 14 (Egypt bt Australia). `is_upset` on ids 14, 15, 19.
-- Re-seed / advance with `python scripts/seed_r16.py [--dry-run]` (idempotent).
+- All 31 knockout slots are `final`. **Spain beat Argentina 1–0 in the final.**
+  Semi-finals: Spain 2–0 France, Argentina 2–1 England.
+- Penalty ties (stored at their level score, so they score as draws): id 1 Germany–Paraguay
+  1–1 (3–4p), id 4 Netherlands–Morocco 1–1 (2–3p), id 14 Australia–Egypt 1–1 (2–4p),
+  id 24 Switzerland–Colombia 0–0 (4–3p).
+- Model went 26/31 — exposed via `GET /model-performance`, computed from the `prob_home/draw/away`
+  columns. The sync prices a fixture when its teams are known and no longer overwrites those
+  probabilities once the result lands (it only fills them if the match was never seen unfinished),
+  so stored odds never trail a result.
+- The GitHub Actions sync cron is **disabled** (schedule removed, `workflow_dispatch` kept).
+  Re-run it by hand if football-data.org ever amends a result.
+- The third-place playoff (France 4–6 England) is not in the DB — there are 31 bracket slots only.
 
 ## Architecture notes
 
 - Model trains once on first API request (~30s), cached via `lru_cache(maxsize=1)` in `backend/routes/predictions.py`
 - All WC matches use `neutral=True`
-- Group picks are persisted to `localStorage` key `wc2026_group_picks`
 - Submitted bracket username stored in `localStorage` key `wc2026_bracket_submission`
-- GroupStage (`/`) → navigate('/bracket', { state: { r32 } }) — BracketChallenge also reads localStorage as fallback
 - CORS uses regex pattern match for all `*.vercel.app` preview URLs (DynamicCORSMiddleware in main.py)
 - 31 WC knockout matches seeded in DB on first startup (`_seed_matches()` in main.py), IDs 1–31
   - R32 slots 1–16 are updated with real fixtures by `scripts/seed_wc2026.py`
+- `sync_matches()` decides "already recorded" on `status == "final"`, NOT `is_locked` — a live 0–0
+  that ends 0–0 on penalties is still an unrecorded result, and a provider flipping
+  FINISHED→IN_PLAY→FINISHED must not re-skip it (this stranded match 24 on `live` for weeks).
+  Regression covered by `tests/test_sync.py`.
 - `/user/predict` is an upsert — re-submitting updates the prediction rather than erroring
-- Poller runs every 5 min during tournament window (Jun 28–Jul 19) if FOOTBALL_DATA_API_KEY is set
+- Poller runs every 5 min during the tournament window (Jun 28–Jul 19 2026) if FOOTBALL_DATA_API_KEY
+  is set — that window has passed, so it is now inert
 - Match.external_id links DB records to football-data.org match IDs for the poller
 
 ## Env vars
@@ -91,15 +99,19 @@ DATABASE_URL=sqlite:///./dev.db                  # default
 - `GET /matches` — all knockout fixtures (incl. probs, penalties, is_upset)
 - `GET /matches/round?round=R16` — fixtures for one stage (R32|R16|QF|SF|Final)
 - `GET /user/{username}/predictions` — a user's picks vs actual result + points (feeds "My Predictions")
-- `GET /leaderboard` — entries now include `total_predictions` (for Correct/Total + AI-accuracy compare)
+- `GET /leaderboard` — entries include `total_predictions` (for Correct/Total + AI-accuracy compare)
+- `GET /model-performance` — model vs actual: accuracy, Brier score, per-stage tally, every miss,
+  and the champion. Computed from stored pre-kickoff probs; feeds the bracket report card,
+  the Leaderboard AI row and the Analysis results section.
 
 ## Routes (frontend)
 
-- `/` — BracketChallenge (landing; live knockout bracket). `/groups` and `/bracket` redirect to `/`.
-- `/analysis` — Analysis (ML research writeup)
+- `/` — Analysis (ML research write-up, landing page); `/analysis` redirects to `/`.
+- `/bracket` — BracketChallenge (finished knockout bracket + AI report card); `/groups` redirects to it
 - `/my-predictions` — MyPredictions (per-user picks vs results)
 - `/leaderboard` — Leaderboard
-- GroupStage.jsx exists but is unrouted (its localStorage picks are still read by BracketChallenge).
+- GroupStage.jsx and `data/wc2026.js` were deleted (unrouted + lint-failing after the tournament ended);
+  BracketChallenge now seeds its first paint from its own INITIAL_R32 and lets the DB overlay the rest.
 - UI: broadcast-scorecard theme — Barlow Condensed (display) + Instrument Sans (body) via @fontsource;
   green (home) / slate (draw) / sky (away) 3-way probability bars; cards lock at kickoff/live.
 
@@ -107,23 +119,31 @@ DATABASE_URL=sqlite:///./dev.db                  # default
 
 - `backend/model/predict.py` — PredictorService, feature engineering, XGBoost training
 - `backend/routes/predictions.py` — /predict, /matches, /group-standings, /bracket-predictions, /user/predict
-- `backend/routes/users.py` — /leaderboard, /results
+- `backend/routes/users.py` — /leaderboard, /results, /model-performance, /user/*/predictions
 - `backend/routes/admin.py` — /admin/update-result, /admin/set-live, /admin/retrain
 - `backend/services/football_data.py` — football-data.org API client (sync + async, name normalization)
 - `backend/services/poller.py` — asyncio polling task (every 5 min during tournament)
-- `frontend/src/data/wc2026.js` — 48 teams, 12 groups, buildR32()
-- `frontend/src/pages/GroupStage.jsx` — landing page, group stage picker
-- `frontend/src/pages/BracketChallenge.jsx` — knockout bracket with live status + scores
+- `backend/services/sync_service.py` — the self-driving bracket sync (all updates route through it)
+- `frontend/src/pages/BracketChallenge.jsx` — finished knockout bracket + ModelReportCard
+- `frontend/src/pages/Analysis.jsx` — research write-up incl. the 2026 results section
 - `scripts/seed_wc2026.py` — re-runnable seed script (group stage CSV + R32 DB fixtures)
 - `scripts/score_result.py` — legacy manual result entry script
 - `data/results.csv` — 49,287 historical matches + 72 WC 2026 group stage results
 
-## Re-seeding after more R32 results come in
+## If a result is amended
 
 ```bash
-# After more R32 results are published by football-data.org:
-FOOTBALL_DATA_API_KEY=... python scripts/seed_wc2026.py
-
-# Then clear the model cache:
-curl -X POST https://<railway-url>/admin/retrain -H "X-Admin-Token: <token>"
+curl -X POST https://wc2026-predictor-api-5qvg.onrender.com/admin/sync -H "X-Admin-Token: <token>"
 ```
+
+One sync re-reads the whole bracket from football-data.org and fixes teams, scores, statuses,
+user points and probabilities. Local seed scripts (`scripts/seed_wc2026.py`, `scripts/seed_r16.py`)
+are still there but the sync supersedes them.
+
+## Known leftovers
+
+- `backend/main.py` still uses the deprecated `@app.on_event("startup")` (works; lifespan migration
+  is the tidy-up if it ever breaks).
+- `pytest` writes fixture rows into a local `dev.db` (older tests don't roll back); `tests/test_sync.py`
+  does roll back. Filter `id<=31` when migrating data out of dev.db.
+- Full `pytest` run takes ~5 min — the model-pipeline tests train real XGBoost models.

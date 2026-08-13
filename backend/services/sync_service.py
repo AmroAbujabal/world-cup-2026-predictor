@@ -93,23 +93,31 @@ def sync_matches(db, matches: list[dict]) -> dict:
             if fd_status in ("FINISHED", "AWARDED"):
                 h, a, ph, pa, pens, et = _extract_result(fd.get("score", {}))
                 if h is not None and a is not None:
-                    already = db_match.is_locked and db_match.home_score == h and db_match.away_score == a
+                    # Compare on status, not is_locked: a live 0–0 that ends 0–0 (pens) is
+                    # still an unrecorded result, and is_locked stays True across a
+                    # provider FINISHED→IN_PLAY→FINISHED correction.
+                    already = db_match.status == "final" and db_match.home_score == h and db_match.away_score == a
                     if not already:
-                        # win-probabilities as they stood pre-result → flag upsets automatically
-                        probs = _predict_probs(db_match.home_team, db_match.away_team)
+                        # Keep the probabilities already stored for this fixture — they were
+                        # written while it was still upcoming. Only price a match here if it
+                        # was never seen unfinished, so recorded odds never follow a result.
+                        if db_match.prob_home is None:
+                            probs = _predict_probs(db_match.home_team, db_match.away_team)
+                            if probs:
+                                db_match.prob_home, db_match.prob_draw, db_match.prob_away = probs
                         _, n = score_match(
                             db, db_match, h, a,
                             penalty_home=ph, penalty_away=pa, went_to_extra_time=et,
                         )
                         scored += n
-                        if probs:
-                            db_match.prob_home, db_match.prob_draw, db_match.prob_away = probs
+                        if db_match.prob_home is not None:
                             winner_home = h > a or (pens and ph and ph > pa)
-                            win_p = probs[0] if winner_home else probs[2]
-                            lose_p = probs[2] if winner_home else probs[0]
+                            win_p = db_match.prob_home if winner_home else db_match.prob_away
+                            lose_p = db_match.prob_away if winner_home else db_match.prob_home
                             db_match.is_upset = win_p < lose_p
                         updated += 1
-            elif fd_status in ("IN_PLAY", "PAUSED", "HALFTIME"):
+            # never downgrade a recorded result back to live
+            elif fd_status in ("IN_PLAY", "PAUSED", "HALFTIME") and db_match.status != "final":
                 if db_match.status != "live":
                     updated += 1
                 db_match.status = "live"

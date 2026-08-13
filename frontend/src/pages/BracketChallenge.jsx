@@ -1,14 +1,15 @@
 // frontend/src/pages/BracketChallenge.jsx
 import { useEffect, useState, useCallback } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import MatchupCard from "../components/MatchupCard";
 import Banner from "../components/Banner";
-import api, {
+import ModelReportCard from "../components/ModelReportCard";
+import {
   predictMatch,
   submitUserPrediction,
   getMatches,
+  getModelPerformance,
 } from "../api/client";
-import { buildR32 } from "../data/wc2026";
 
 // Official WC 2026 bracket — ordered so R16 pairs are correct
 // R16: (1v2) (3v4) (5v6) (7v8) (9v10) (11v12) (13v14) (15v16)
@@ -99,11 +100,19 @@ function buildEmptyRound(n, prefix) {
   }));
 }
 
-function ModelBanner() {
+function ModelBanner({ perf }) {
   const stats = [
     { label: "Training matches", value: "49,287" },
     { label: "Model", value: "XGBoost" },
     { label: "Features", value: "9" },
+    ...(perf?.accuracy != null
+      ? [
+          {
+            label: "2026 WC accuracy",
+            value: `${Math.round(perf.accuracy * 100)}%`,
+          },
+        ]
+      : []),
     { label: "2018 WC accuracy", value: "40.6%" },
     { label: "2022 WC accuracy", value: "39.1%" },
     { label: "Baseline (random)", value: "33.3%" },
@@ -153,7 +162,6 @@ function getSavedSubmission() {
 }
 
 export default function BracketChallenge() {
-  const location = useLocation();
   const [username, setUsername] = useState(
     () => getSavedSubmission()?.username || "",
   );
@@ -163,32 +171,9 @@ export default function BracketChallenge() {
   const [submitting, setSubmitting] = useState(false);
   const [submitMsg, setSubmitMsg] = useState("");
 
-  // Use group-stage picks from router state, localStorage, or default R32
-  const r32Source = (() => {
-    if (location.state?.r32) return location.state.r32;
-    try {
-      const saved = localStorage.getItem("wc2026_group_picks");
-      if (saved) {
-        const { selections, thirdSelected } = JSON.parse(saved);
-        const allDone = Object.values(selections).every((s) => s.length === 2);
-        if (allDone && thirdSelected?.length === 8) {
-          const groupResults = Object.fromEntries(
-            Object.entries(selections).map(([g, s]) => [
-              g,
-              { winner: s[0], runnerUp: s[1] },
-            ]),
-          );
-          return buildR32(groupResults, thirdSelected);
-        }
-      }
-    } catch {
-      /* fall through */
-    }
-    return INITIAL_R32;
-  })();
-
+  // First paint before /matches lands; the DB then overlays every slot.
   const [bracket, setBracket] = useState([
-    r32Source.map((m) => ({
+    INITIAL_R32.map((m) => ({
       ...m,
       prob1: null,
       prob2: null,
@@ -205,7 +190,7 @@ export default function BracketChallenge() {
   const [picks, setPicks] = useState({});
   const [loadingProbs, setLoadingProbs] = useState({});
 
-  const [r16Predictions, setR16Predictions] = useState(null);
+  const [perf, setPerf] = useState(null);
 
   const fetchProbs = useCallback(async (matchupId, team1, team2) => {
     if (!team1 || !team2) return;
@@ -328,20 +313,12 @@ export default function BracketChallenge() {
     return () => clearInterval(timer);
   }, [applyLiveData]);
 
-  // Fetch AI bracket simulation (R16 predictions)
+  // How the model's stored pre-kickoff calls held up against the real results
   useEffect(() => {
-    api
-      .get("/bracket-predictions")
-      .then(({ data }) => {
-        setR16Predictions(data.rounds?.[1]?.matchups || null); // index 1 = R16
-      })
+    getModelPerformance()
+      .then(({ data }) => setPerf(data))
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    r32Source.forEach((m) => fetchProbs(m.id, m.team1, m.team2));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchProbs]);
 
   const handlePick = useCallback(
     (matchupId, winner) => {
@@ -428,7 +405,10 @@ export default function BracketChallenge() {
   };
 
   const totalPicks = Object.keys(picks).length;
-  const champion = picks[bracket[4][0]?.id];
+  const finalMatch = bracket[4][0];
+  const realChampion = winnerOf(finalMatch);
+  const complete = !!realChampion;
+  const champion = complete ? realChampion : picks[finalMatch?.id];
 
   // Vertical spacing formula: each bracket level doubles the cell size
   const bracketGap = (roundIdx) =>
@@ -442,179 +422,222 @@ export default function BracketChallenge() {
       <div className="max-w-5xl mx-auto mb-6">
         <div className="pitch-deep pitch-stripes rounded-3xl px-6 sm:px-10 py-8 sm:py-10 border-2 border-pitch-700 shadow-[0_10px_40px_rgba(5,56,37,0.25)] relative overflow-hidden reveal">
           <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gold-400 mb-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            FIFA World Cup 2026 · Round of 16 · Live
+            {complete ? (
+              <>FIFA World Cup 2026 · Tournament complete</>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                FIFA World Cup 2026 · Live
+              </>
+            )}
           </span>
-          <h1 className="font-display text-4xl sm:text-6xl text-white leading-[0.95] tracking-tight mb-3">
-            ROAD TO THE
-            <br />
-            <span className="text-gold-400">FINAL</span>
-          </h1>
-          <p className="text-pitch-100/80 text-sm max-w-xl">
-            Call every knockout match, R32 to the trophy. The AI model posts
-            live Win / Draw / Loss odds — beat it, and beat your friends. Scores
-            refresh every 60s.
-          </p>
+          {complete ? (
+            <>
+              <h1 className="font-display text-4xl sm:text-6xl text-white leading-[0.95] tracking-tight mb-3">
+                {realChampion.toUpperCase()}
+                <br />
+                <span className="text-gold-400">ARE CHAMPIONS</span>
+              </h1>
+              <p className="text-pitch-100/80 text-sm max-w-xl">
+                {finalMatch.team1} {finalMatch.homeScore}–{finalMatch.awayScore}{" "}
+                {finalMatch.team2}
+                {finalMatch.wentToPenalties &&
+                  ` (${finalMatch.penaltyHome}–${finalMatch.penaltyAway} on penalties)`}{" "}
+                in the final. Every knockout match below carries the odds the
+                model held before the result landed — the full 31-match bracket,
+                start to trophy.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-display text-4xl sm:text-6xl text-white leading-[0.95] tracking-tight mb-3">
+                ROAD TO THE
+                <br />
+                <span className="text-gold-400">FINAL</span>
+              </h1>
+              <p className="text-pitch-100/80 text-sm max-w-xl">
+                Call every knockout match, R32 to the trophy. The AI model posts
+                live Win / Draw / Loss odds — beat it, and beat your friends.
+                Scores refresh every 60s.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Shock result — Canada eliminated */}
-      <div className="max-w-5xl mx-auto mb-6">
-        <Banner
-          tone="red"
-          eyebrow="Shock result · Round of 16"
-          title="Canada are out"
-          icon="🇨🇦"
-        >
-          The co-hosts became the{" "}
-          <span className="font-semibold">first team eliminated</span>, falling{" "}
-          <span className="font-semibold">3–0 to Morocco</span> after advancing
-          from the Round of 32.
-        </Banner>
-      </div>
-
-      {/* R16 AI Predictions panel */}
-      {r16Predictions && (
-        <div className="max-w-5xl mx-auto mb-8 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-widest text-gold-600 mb-1">
-            AI Simulation
-          </p>
-          <h2 className="text-lg font-bold text-slate-900 mb-4">
-            Predicted Round of 16
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {r16Predictions.map((m, i) => (
-              <div
-                key={i}
-                className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden text-sm"
-              >
-                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200">
-                  <span
-                    className={`font-medium truncate ${m.predicted_winner === m.team1 ? "text-pitch-700 font-bold" : "text-slate-500"}`}
-                  >
-                    {m.team1}
-                  </span>
-                  <span className="text-xs text-slate-400 shrink-0 ml-1">
-                    {Math.round(m.prob1 * 100)}%
-                  </span>
-                </div>
-                <div className="flex items-center justify-between px-3 py-2">
-                  <span
-                    className={`font-medium truncate ${m.predicted_winner === m.team2 ? "text-pitch-700 font-bold" : "text-slate-500"}`}
-                  >
-                    {m.team2}
-                  </span>
-                  <span className="text-xs text-slate-400 shrink-0 ml-1">
-                    {Math.round(m.prob2 * 100)}%
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="text-xs text-slate-400 mt-3">
-            Predicted winners in bold gold — based on who AI expects to win each
-            R32 match.
-          </p>
+      {/* Champion */}
+      {complete && (
+        <div className="max-w-5xl mx-auto mb-6">
+          <Banner
+            tone="gold"
+            eyebrow="Final · 19 July 2026"
+            title={`${realChampion} win the World Cup`}
+            icon="🏆"
+          >
+            {perf?.champion?.model_probability != null && (
+              <>
+                The model gave them{" "}
+                <span className="font-semibold">
+                  {Math.round(perf.champion.model_probability * 100)}%
+                </span>{" "}
+                in the final and{" "}
+                {perf.champion.model_called_it ? (
+                  <span className="font-semibold">called it right</span>
+                ) : (
+                  <span className="font-semibold">got it wrong</span>
+                )}
+                .{" "}
+              </>
+            )}
+            {perf?.champion?.runner_up &&
+              `${perf.champion.runner_up} finish as runners-up.`}
+          </Banner>
         </div>
       )}
 
+      <ModelReportCard perf={perf} />
+
       {/* Model explanation banner */}
       <div className="max-w-5xl mx-auto">
-        <ModelBanner />
+        <ModelBanner perf={perf} />
       </div>
 
-      {/* Username + progress + submit */}
-      <div className="max-w-5xl mx-auto mb-8 flex flex-wrap items-center gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm">
-        <input
-          type="text"
-          placeholder="Your username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          disabled={submitted}
-          className="bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-pitch-600 disabled:opacity-50 placeholder:text-slate-400"
-        />
-
-        {/* Progress bar */}
-        <div className="flex items-center gap-2 flex-1 min-w-48">
-          <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-pitch-600 rounded-full transition-all"
-              style={{ width: `${(totalPicks / TOTAL_MATCHUPS) * 100}%` }}
-            />
-          </div>
-          <span className="text-sm text-slate-500 whitespace-nowrap">
-            {totalPicks}/{TOTAL_MATCHUPS} picks
-          </span>
-        </div>
-
-        {champion && (
-          <span className="text-sm font-bold text-gold-700 bg-gold-100 border border-gold-300 px-3 py-1 rounded-lg">
-            {champion}
-          </span>
-        )}
-
-        {!submitted ? (
-          <button
-            onClick={handleSubmit}
-            disabled={
-              submitting || totalPicks < TOTAL_MATCHUPS || !username.trim()
-            }
-            className="bg-pitch-700 hover:bg-pitch-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap cursor-pointer disabled:cursor-not-allowed"
-          >
-            {submitting ? "Submitting…" : "Submit Bracket"}
-          </button>
-        ) : (
-          <div className="flex items-center gap-2 text-sm font-semibold text-pitch-700 bg-pitch-100 border border-pitch-300 px-3 py-2 rounded-xl">
-            <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none">
-              <path
-                d="M3 8l3.5 3.5L13 4.5"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            Bracket locked in as <span className="font-bold">{username}</span>
-          </div>
-        )}
-        {submitMsg && <span className="text-red-500 text-sm">{submitMsg}</span>}
-      </div>
-
-      {/* Submitted confirmation banner */}
-      {submitted && (
-        <div className="max-w-5xl mx-auto mb-6 bg-pitch-50 border border-pitch-300 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-bold text-pitch-800 mb-0.5">
-              Your bracket is submitted!
-            </p>
-            <p className="text-xs text-pitch-700">
-              Predictions are locked in as{" "}
-              <span className="font-semibold">{username}</span>.
-              {champion && (
-                <>
-                  {" "}
-                  Your champion pick:{" "}
-                  <span className="font-semibold">{champion}</span>.
-                </>
-              )}{" "}
-              The tournament is live — points update as each match finishes.
-            </p>
-          </div>
+      {/* Entry panel — closed once the tournament is over */}
+      {complete ? (
+        <div className="max-w-5xl mx-auto mb-8 flex flex-wrap items-center gap-4 bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm">
+          <p className="text-sm text-slate-600 flex-1 min-w-56">
+            <span className="font-semibold text-slate-900">
+              Entries are closed.
+            </span>{" "}
+            The tournament is over — every match below is a finished result.
+            {submitted && (
+              <>
+                {" "}
+                Your bracket was locked in as{" "}
+                <span className="font-semibold">{username}</span>.
+              </>
+            )}
+          </p>
           <div className="flex items-center gap-2 shrink-0">
-            <Link
-              to="/my-predictions"
-              className="text-xs font-bold text-pitch-700 border border-pitch-400 hover:bg-pitch-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
-            >
-              My predictions →
-            </Link>
+            {submitted && (
+              <Link
+                to="/my-predictions"
+                className="text-xs font-bold text-pitch-700 border border-pitch-400 hover:bg-pitch-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+              >
+                My predictions →
+              </Link>
+            )}
             <Link
               to="/leaderboard"
               className="text-xs font-bold text-pitch-700 border border-pitch-400 hover:bg-pitch-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
             >
-              Leaderboard →
+              Final standings →
             </Link>
           </div>
         </div>
+      ) : (
+        <>
+          {/* Username + progress + submit */}
+          <div className="max-w-5xl mx-auto mb-8 flex flex-wrap items-center gap-3 bg-white border border-slate-200 rounded-2xl px-5 py-4 shadow-sm">
+            <input
+              type="text"
+              placeholder="Your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              disabled={submitted}
+              className="bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-slate-900 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-pitch-600 disabled:opacity-50 placeholder:text-slate-400"
+            />
+
+            {/* Progress bar */}
+            <div className="flex items-center gap-2 flex-1 min-w-48">
+              <div className="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-pitch-600 rounded-full transition-all"
+                  style={{ width: `${(totalPicks / TOTAL_MATCHUPS) * 100}%` }}
+                />
+              </div>
+              <span className="text-sm text-slate-500 whitespace-nowrap">
+                {totalPicks}/{TOTAL_MATCHUPS} picks
+              </span>
+            </div>
+
+            {champion && (
+              <span className="text-sm font-bold text-gold-700 bg-gold-100 border border-gold-300 px-3 py-1 rounded-lg">
+                {champion}
+              </span>
+            )}
+
+            {!submitted ? (
+              <button
+                onClick={handleSubmit}
+                disabled={
+                  submitting || totalPicks < TOTAL_MATCHUPS || !username.trim()
+                }
+                className="bg-pitch-700 hover:bg-pitch-600 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold px-6 py-2.5 rounded-xl transition-colors text-sm whitespace-nowrap cursor-pointer disabled:cursor-not-allowed"
+              >
+                {submitting ? "Submitting…" : "Submit Bracket"}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 text-sm font-semibold text-pitch-700 bg-pitch-100 border border-pitch-300 px-3 py-2 rounded-xl">
+                <svg
+                  className="w-4 h-4 shrink-0"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                >
+                  <path
+                    d="M3 8l3.5 3.5L13 4.5"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                Bracket locked in as{" "}
+                <span className="font-bold">{username}</span>
+              </div>
+            )}
+            {submitMsg && (
+              <span className="text-red-500 text-sm">{submitMsg}</span>
+            )}
+          </div>
+
+          {/* Submitted confirmation banner */}
+          {submitted && (
+            <div className="max-w-5xl mx-auto mb-6 bg-pitch-50 border border-pitch-300 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold text-pitch-800 mb-0.5">
+                  Your bracket is submitted!
+                </p>
+                <p className="text-xs text-pitch-700">
+                  Predictions are locked in as{" "}
+                  <span className="font-semibold">{username}</span>.
+                  {champion && (
+                    <>
+                      {" "}
+                      Your champion pick:{" "}
+                      <span className="font-semibold">{champion}</span>.
+                    </>
+                  )}{" "}
+                  The tournament is live — points update as each match finishes.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  to="/my-predictions"
+                  className="text-xs font-bold text-pitch-700 border border-pitch-400 hover:bg-pitch-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  My predictions →
+                </Link>
+                <Link
+                  to="/leaderboard"
+                  className="text-xs font-bold text-pitch-700 border border-pitch-400 hover:bg-pitch-100 px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+                >
+                  Leaderboard →
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Bracket — horizontally scrollable */}

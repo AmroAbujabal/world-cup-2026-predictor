@@ -74,7 +74,7 @@ export default function MyPredictions() {
   return (
     <div className="max-w-2xl mx-auto reveal">
       <p className="text-xs font-bold uppercase tracking-widest text-pitch-700 mb-1">
-        Round of 16 · Live
+        World Cup 2026 · Final results
       </p>
       <h1 className="font-display text-4xl font-bold mb-1 text-slate-900 tracking-tight">
         My Predictions

@@ -6,6 +6,7 @@ const TONES = {
   sky: "bg-sky-50 border-sky-200 text-sky-900",
   slate: "bg-slate-50 border-slate-200 text-slate-800",
   red: "bg-red-50 border-red-200 text-red-900",
+  gold: "bg-gold-50 border-gold-300 text-gold-900",
 };
 
 const EYEBROW = {
@@ -14,6 +15,7 @@ const EYEBROW = {
   sky: "text-sky-600",
   slate: "text-slate-500",
   red: "text-red-600",
+  gold: "text-gold-700",
 };
 
 export default function Banner({

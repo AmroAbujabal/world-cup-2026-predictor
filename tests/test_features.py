@@ -142,26 +142,26 @@ EXPECTED_FEATURE_COLS = [
 
 def test_build_features_returns_x_and_y():
     df = load_data("data/results.csv")
-    X, y = build_features(df)
+    X, y, _ = build_features(df)
     assert X.shape[0] == len(df)
     assert y.shape[0] == len(df)
 
 
 def test_build_features_correct_columns():
     df = load_data("data/results.csv")
-    X, y = build_features(df)
+    X, y, _ = build_features(df)
     for col in EXPECTED_FEATURE_COLS:
         assert col in X.columns, f"Missing feature column: {col}"
 
 
 def test_build_features_target_three_classes():
     df = load_data("data/results.csv")
-    X, y = build_features(df)
+    X, y, _ = build_features(df)
     assert set(y.unique()).issubset({0, 1, 2})
 
 
 def test_build_features_no_nulls():
     df = load_data("data/results.csv")
-    X, y = build_features(df)
+    X, y, _ = build_features(df)
     assert not X.isnull().any().any(), "X contains null values"
     assert not y.isnull().any(), "y contains null values"

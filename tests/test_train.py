@@ -7,7 +7,7 @@ from backend.model.features import load_data, build_features
 @pytest.fixture(scope="module")
 def training_data():
     df = load_data("data/results.csv")
-    X, y = build_features(df)
+    X, y, _ = build_features(df)
     return X.iloc[:5000], y.iloc[:5000]
 
 

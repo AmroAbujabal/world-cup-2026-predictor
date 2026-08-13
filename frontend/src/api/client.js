@@ -19,6 +19,8 @@ export const getLeaderboard = () => api.get("/leaderboard");
 
 export const getMatches = () => api.get("/matches");
 
+export const getModelPerformance = () => api.get("/model-performance");
+
 export const getMatchesByRound = (round) =>
   api.get("/matches/round", { params: { round } });
 

@@ -32,8 +32,8 @@ def _backtest_year(df_full: pd.DataFrame, year: int) -> tuple[float, list[dict[s
     if len(test_df) == 0:
         raise ValueError(f"No FIFA World Cup matches found for {year}")
 
-    X_train, y_train = build_features(train_df)
-    X_test, y_test = build_features(test_df)
+    X_train, y_train, _ = build_features(train_df)
+    X_test, y_test, _ = build_features(test_df)
 
     model = train_model(X_train, y_train)
     preds = model.predict(X_test)

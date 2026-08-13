@@ -240,7 +240,8 @@ export default function MatchupCard({
           );
         })}
 
-        {!isFinal && has3Way && team1 && team2 && (
+        {/* Kept on finished matches too — the pre-kickoff odds vs the ✓ result is the story */}
+        {has3Way && team1 && team2 && (
           <ProbBar
             home={probHome}
             draw={probDraw}

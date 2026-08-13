@@ -1,10 +1,13 @@
 name: sync-results
 
-# Free replacement for the always-on poller: ping the backend's /admin/sync every
-# ~10 min so the bracket stays current even while the free host is spun down.
+# Free replacement for the always-on poller: pings the backend's /admin/sync so the
+# bracket stays current even while the free host is spun down.
+#
+# The 2026 tournament finished on 19 Jul 2026 and every result is recorded, so the
+# 10-minute schedule is off — it would burn Actions minutes re-fetching a settled
+# bracket. Run it by hand (Actions → sync-results → Run workflow) if the data
+# provider ever amends a result.
 on:
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
 jobs:

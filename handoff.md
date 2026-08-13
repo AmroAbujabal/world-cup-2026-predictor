@@ -1,91 +1,81 @@
-# Handoff — World Cup 2026 Predictor: tournament finished, app closed out
+# Handoff — World Cup 2026 Predictor: queued follow-ups cleared
 
 ## Goal
 
-The 2026 World Cup ended on 19 July 2026 (Spain 1–0 Argentina). Bring the app to its finished
-state: heal the bracket data, present the tournament as complete rather than live, score the
-model against the real results, and clean out what the end of the tournament made dead.
+Work the four follow-ups left when the tournament was closed out: third-place playoff as a
+32nd bracket slot, lifespan migration, test rollback hygiene, and the portfolio update. Plus
+one raised mid-session: the bracket page's round alignment was visibly broken.
 
 ## Current State
 
-- **Bracket data is correct.** All 31 knockout slots are `final`. The one stale row (id 24,
-  Switzerland–Colombia, stuck on `live 0–0` since early July) was a sync bug, now fixed —
-  it records as 0–0 with a 4–3 shootout to Switzerland.
-- **Model scorecard is live**: `GET /model-performance` → 26/31 correct (83.9%), Brier 0.3665,
-  by round R32 14/16 · R16 6/8 · QF 4/4 · SF 2/2 · Final 0/1. It called the final for Argentina
-  at 43%. Computed from the probabilities stored before the result was recorded.
-- **Frontend shows the finished tournament**: champion hero + banner, AI report card with every
-  miss, entries-closed panel, real champion in the champion slot, final standings on the
-  leaderboard with the model scored on the players' 3-points scale.
-- **Tests: 50 passed** (was 45 passed / 5 failed). Lint and build clean.
-- Sync cron is off (`workflow_dispatch` only); the in-process poller is inert past its window.
+Everything below is **shipped and verified in production**.
+
+- **Slot 32 is live.** `GET /matches` returns 32, slot 32 = `3rd Place`, France 4–6 England,
+  `is_upset` true, model probs 0.558/0.187/0.255 (it favoured France and got it wrong).
+- **Scorecard deliberately unchanged: 26/31, 83.9%, Brier 0.3665.** `/model-performance` still
+  filters `id <= 31`. The playoff sits outside the bracket challenge because nobody predicted it,
+  so the leaderboard denominators stay at 31 too. This was an explicit call — including it would
+  read 26/32 (81.3%) since it's a miss.
+- **Bracket layout fixed** (see Changes Made #4) — rounds now line up with their feeders.
+- **Lifespan migration done**; the `on_event` deprecation warnings are gone from the test run.
+- **pytest no longer writes into `dev.db`.** A full suite run leaves it at 32 matches / 10 users /
+  310 predictions.
+- Tests **51 passed** (was 50). Frontend lint + build clean.
+- Portfolio updated and pushed (`9bf96d0`), deploys GitHub → Vercel.
+
+Commits: `1007ca5` (the three backend/test items), `095c058` (bracket layout), portfolio `9bf96d0`.
 
 ## Active Files
 
-- Backend: `backend/services/sync_service.py` (the fix), `backend/routes/users.py`
-  (`/model-performance`), `backend/model/backtest.py` (unpack fix)
-- Tests: `tests/test_sync.py` (new), `tests/test_features.py`, `tests/test_train.py`
-- Frontend: `src/pages/{BracketChallenge,Leaderboard,Analysis,MyPredictions}.jsx`,
-  `src/components/{MatchupCard,Banner}.jsx`, `src/api/client.js`, `src/App.jsx`
-- Ops/docs: `.github/workflows/sync.yml`, `CLAUDE.md`, `README.md`
+- `backend/main.py` — `_ensure_third_place()`, `lifespan` context manager
+- `backend/services/sync_service.py` — `STAGE_SLOTS["THIRD_PLACE"]`
+- `backend/routes/predictions.py` — `_stage_label()` bound, `STAGE_ID_RANGES["3rd Place"]`
+- `backend/routes/users.py` — comment making the `id <= 31` scoping intentional
+- `frontend/src/pages/BracketChallenge.jsx` — third-place Banner, bracket layout
+- `tests/test_sync.py` (new third-place test), `tests/test_scoring.py`, `tests/test_main.py`
+- `~/portfolio/src/data/content.ts`, `~/portfolio/public/projects/world-cup-predictor.png`
 
 ## Changes Made
 
-1. **Sync fix (root cause of the stuck match).** `sync_matches()` decided "already recorded" from
-   `is_locked`; a match that was live at 0–0 and finished 0–0 on penalties matched that test and was
-   skipped on every sync forever. Now it compares `status == "final"`, and an `IN_PLAY` payload can
-   no longer downgrade a recorded result (the provider flipped FINISHED→IN_PLAY→FINISHED on 2 Aug).
-   `tests/test_sync.py` covers both; both tests fail on the old code.
-2. **`GET /model-performance`** — accuracy, Brier, per-stage tally, every miss, champion. Consumed by
-   the bracket report card, the leaderboard AI row and the analysis page; no hardcoded accuracy left.
-3. **Bracket page**: champion hero/banner/slot, entries-closed panel, report card replacing the stale
-   "Predicted Round of 16" simulation, W/D/L bar kept on finished cards.
-4. **Leaderboard**: final standings, pool winner in the subhead, AI row on the same points scale
-   (78 pts, 26/31) with a footnote on why the comparison isn't strictly like-for-like.
-5. **Analysis**: new §6 "2026 World Cup: How It Actually Did" (stats, per-round, every miss, sample-size
-   caveat), sections renumbered, live/future-tense copy moved to past tense.
-6. **Cleanup**: cron schedule removed; `GroupStage.jsx` + `data/wc2026.js` deleted (unrouted,
-   lint-failing) and BracketChallenge's dead localStorage/router-state path with them; fixed the
-   `build_features` 3-tuple unpack in `backtest.py` (real source bug — the backtest module had been
-   broken since the signature changed) and in two test files; CLAUDE.md + README rewritten to the
-   finished state.
+1. **Third-place playoff = slot 32.** `_ensure_third_place()` tops the row up on every boot —
+   `_seed_matches()` only fires on an empty table and every deployed DB already had 1–31. Sync
+   picks it up via `STAGE_SLOTS["THIRD_PLACE"]`. `_stage_label()` previously returned "Final" for
+   anything past 30; it now distinguishes 31 from 32. Rendered as its own `Banner` (reusing the
+   existing component) rather than forced into the 5-round pick tree.
+2. **Lifespan migration.** Only the poller lived in `@app.on_event("startup")` — `_migrate_db()`
+   and `_seed_matches()` run at import — so it moved to an `asynccontextmanager`, no behaviour change.
+3. **Test rollback hygiene.** `test_scoring.py` took the rollback fixture from `test_sync.py`.
+   `test_main.py`'s `/results` test **must** really commit (the endpoint runs in the app's own
+   session and only sees committed rows), so it deletes its rows in a `finally` instead. Purged the
+   pre-existing junk (ids 32–37, 14 test users) so the real slot 32 could take id 32.
+4. **Bracket layout fix.** Spacing came from `CELL = 82` with `gap = 2^round * CELL - 76`, i.e. it
+   assumed a ~76px card. Finished cards are 140–176px (score header, two team rows, probability bar,
+   penalty footnote, UPSET badge), so every round drifted further off — the Final's 618px offset
+   landed nowhere near the R32 column's real centre (~1170px), and later rounds bunched at the top
+   leaving most of the bracket empty. Replaced with height-agnostic CSS: `items-stretch` on the row
+   so all columns share R32's height, each card in a `flex-1` wrapper centring it in its share.
+   Verified live — QF 1830 = midpoint of R16's 1671/1989; SF 2148 = midpoint of QF's 1830/2466;
+   Final 2784 = midpoint of SF's 2148/3421; Champion matches the Final. Net −13 lines.
 
 ## Failed Attempts / Gotchas
 
-- `POST /admin/sync` with the local `.env` `ADMIN_TOKEN` returns 403 — the Render env has a
-  different token. The live DB heals via the GitHub Actions workflow instead (`gh workflow run
-sync-results`), which carries the right secret.
-- Playwright MCP screenshots did not land on disk in this environment; the accessibility snapshots
-  under `~/.playwright-mcp/*.yml` were used for verification instead, which was sufficient.
-- Snapshots taken immediately after `browser_navigate` catch the pages mid-fetch ("Loading…") —
-  wait for a known string before reading them.
-- To preview the finished UI locally, `scripts`-free mirror script copied prod `/matches` into
-  `dev.db` (scratchpad, not committed); `dev.db` is gitignored so this is safe but it leaves local
-  data that no longer matches prod.
+- **Do not `run_sync()` against a mirrored `dev.db`.** Its `external_id`s were never aligned with its
+  team names (the mirror script copied teams from `/matches`, which doesn't expose `external_id`), so
+  a full sync re-homes every fixture onto its true `external_id` row and scrambles the local bracket
+  — id 1 became "South Africa–Canada 0–1 with penalties". **Prod is unaffected**: it wrote teams and
+  `external_id` together, and a prod sync was a clean no-op for 1–31. Restore from a copy instead.
+  Now recorded in CLAUDE.md under Known leftovers.
+- Playwright MCP screenshots still don't land on disk here. Worked around with a small node script
+  using `~/portfolio/node_modules/playwright` — note it resolves modules from the _script's_
+  directory, so it has to live inside a repo that has playwright installed.
+- Next.js caches optimised images by src path, so replacing `world-cup-predictor.png` in place kept
+  serving the old one locally until `rm -rf .next/cache/images`. Vercel builds fresh, so prod was fine.
+- The local `.env` `ADMIN_TOKEN` still 403s against Render (unchanged) — heal prod with
+  `gh workflow run sync-results`, which carries the right secret. Used it here for slot 32.
 
 ## Next steps
 
-Shipping is **done**: `08b23a2` is on main, Render redeployed, `gh workflow run sync-results` healed
-match 24, `vercel --prod` redeployed the frontend, and production was verified (31/31 final,
-`/model-performance` → 26/31). Nothing above is outstanding.
+Nothing outstanding — all four queued items and the layout fix are shipped and verified.
 
-### Next session: start here (user asked for all four, in this order)
-
-1. **Portfolio update** — `~/portfolio`, content lives in `src/data/content.ts`. Add this project's
-   finished state: Spain champions, model 26/31 (83.9%), the AI report card, and fresh screenshots of
-   `/` and `/bracket` from https://frontend-nine-alpha-56.vercel.app. Site is Tesla-style white
-   minimal; the user has rejected dark/ornate treatments as slop. Deploys GitHub → Vercel.
-2. **Third-place playoff as a 32nd slot** — football-data.org has it as `THIRD_PLACE`, fd id 537389,
-   France 4–6 England on 2026-07-18. Needs: `_seed_matches()` slot 32, `STAGE_SLOTS["THIRD_PLACE"] =
-range(32, 33)` in `sync_service.py`, `_stage_label()` (currently returns "Final" for any id > 30 —
-   fix that bound), the `Match.id <= 31` filter in `/model-performance`, and a bracket-page slot.
-   Users never predicted it, so leaderboard denominators stay at 31.
-3. **Lifespan migration** — `backend/main.py:149` still uses the deprecated `@app.on_event("startup")`
-   (seeds matches, runs `_migrate_db()`, launches the poller). Move to a `lifespan` context manager.
-4. **Test rollback hygiene** — `tests/test_scoring.py` and friends commit fixture rows into `dev.db`
-   (ids 32–36 are already in there). Give them the rollback fixture pattern from `tests/test_sync.py`.
-   Note this interacts with item 2: real match 32 vs leftover fixture rows at ids 32–36 — clear the
-   junk rows before seeding a third-place slot.
-
-Verify each with `python3 -m pytest tests/ -q` (~5 min, 50 passing now) plus
-`cd frontend && npm run lint && npm run build`.
+Optional, if the bracket page gets more attention: it still has no connector lines between rounds.
+The geometry is now correct so drawing them is tractable, but it's cosmetic and nobody asked.

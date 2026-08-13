@@ -2,6 +2,7 @@
 import asyncio
 import re
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
 from sqlalchemy import text
@@ -90,9 +91,49 @@ def _seed_matches():
 _seed_matches()
 
 
+def _ensure_third_place():
+    """Add the third-place playoff (slot 32) to DBs seeded before it existed.
+
+    Separate from _seed_matches() because that only runs on an empty table — every
+    deployed DB already has slots 1–31. The sync fills in teams/date/result from
+    football-data.org's THIRD_PLACE stage.
+    """
+    from datetime import datetime, timezone
+    from backend.db.models import Match
+
+    db = SessionLocal()
+    try:
+        if db.query(Match).filter(Match.id == 32).first():
+            return
+        db.add(Match(
+            id=32,
+            home_team="3rd Place TBD", away_team="3rd Place TBD",
+            match_date=datetime(2026, 7, 18, tzinfo=timezone.utc),
+            tournament="FIFA World Cup 2026",
+        ))
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
+
+
+_ensure_third_place()
+
+
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="World Cup Predictor API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Background poller — only starts if an API key is set. Its tournament window
+    # (Jun 28 – Jul 19 2026) has passed, so it exits immediately in practice.
+    if os.getenv("FOOTBALL_DATA_API_KEY"):
+        from backend.services.poller import poll_loop
+        asyncio.create_task(poll_loop())
+    yield
+
+
+app = FastAPI(title="World Cup Predictor API", version="1.0.0", lifespan=lifespan)
 
 ALLOWED_ORIGINS = re.compile(
     r"^(http://localhost:\d+|https://[\w-]+-amrabujabal35-2594s-projects\.vercel\.app|https://frontend-nine-alpha-56\.vercel\.app)$"
@@ -142,12 +183,3 @@ from backend.routes.admin import router as admin_router
 app.include_router(predictions_router)
 app.include_router(users_router)
 app.include_router(admin_router)
-
-
-# ── Background poller (only starts if API key is set) ─────────────────────────
-
-@app.on_event("startup")
-async def start_poller():
-    if os.getenv("FOOTBALL_DATA_API_KEY"):
-        from backend.services.poller import poll_loop
-        asyncio.create_task(poll_loop())

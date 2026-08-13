@@ -61,6 +61,8 @@ def model_performance(db: Session = Depends(get_db)):
 
     matches = (
         db.query(Match)
+        # Slots 1–31 only: the scorecard is scoped to the bracket users played, so the
+        # third-place playoff (slot 32, nobody predicted it) stays out of the denominator.
         .filter(Match.id <= 31, Match.status == "final", Match.prob_home.isnot(None))
         .order_by(Match.id)
         .all()

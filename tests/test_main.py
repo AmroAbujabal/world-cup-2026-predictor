@@ -62,6 +62,8 @@ def test_score_results_updates_user_points(client):
     from datetime import datetime
     import uuid
 
+    # This one must really commit — /results runs in the app's own session, which only
+    # sees committed rows — so it cleans up after itself instead of rolling back.
     db = SessionLocal()
     match = Match(
         home_team="Brazil", away_team="France",
@@ -77,11 +79,19 @@ def test_score_results_updates_user_points(client):
     )
     db.add(pred)
     db.commit()
-    match_id = match.id
+    match_id, user_id, pred_id = match.id, user.id, pred.id
     db.close()
 
-    resp = client.post("/results", json={"match_id": match_id, "home_score": 2, "away_score": 1})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["scored_predictions"] == 1
-    assert data["actual_outcome"] == "home_win"
+    try:
+        resp = client.post("/results", json={"match_id": match_id, "home_score": 2, "away_score": 1})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["scored_predictions"] == 1
+        assert data["actual_outcome"] == "home_win"
+    finally:
+        db = SessionLocal()
+        db.query(UserPrediction).filter(UserPrediction.id == pred_id).delete()
+        db.query(User).filter(User.id == user_id).delete()
+        db.query(Match).filter(Match.id == match_id).delete()
+        db.commit()
+        db.close()

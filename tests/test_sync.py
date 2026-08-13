@@ -73,3 +73,22 @@ def test_in_play_does_not_downgrade_a_final_match(db, monkeypatch):
 
     assert match.status == "final"
     assert (match.home_score, match.away_score) == (2, 1)
+
+
+def test_third_place_playoff_lands_in_slot_32(db, monkeypatch):
+    """The THIRD_PLACE stage fills slot 32 — the real one is France 4–6 England."""
+    monkeypatch.setattr(db, "commit", db.flush)
+    slot = db.query(Match).filter(Match.id == 32).first()
+    assert slot is not None, "slot 32 should be seeded by _ensure_third_place()"
+
+    sync_service.sync_matches(db, [{
+        "id": 537_389, "stage": "THIRD_PLACE", "status": "FINISHED",
+        "utcDate": "2026-07-18T19:00:00Z",
+        "homeTeam": {"name": "France"}, "awayTeam": {"name": "England"},
+        "score": {"duration": "REGULAR", "fullTime": {"home": 4, "away": 6}},
+    }])
+
+    assert (slot.home_team, slot.away_team) == ("France", "England")
+    assert (slot.home_score, slot.away_score) == (4, 6)
+    assert slot.status == "final"
+    assert slot.external_id == 537_389

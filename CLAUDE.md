@@ -45,7 +45,10 @@ cd frontend && npm run dev -- --port 5200
   so stored odds never trail a result.
 - The GitHub Actions sync cron is **disabled** (schedule removed, `workflow_dispatch` kept).
   Re-run it by hand if football-data.org ever amends a result.
-- The third-place playoff (France 4–6 England) is not in the DB — there are 31 bracket slots only.
+- The third-place playoff (France 4–6 England, 18 Jul, fd id 537389) is DB slot **32**, added by
+  `_ensure_third_place()` in main.py and filled by the sync's `THIRD_PLACE` stage. It sits outside
+  the 31-match bracket: nobody predicted it, so `/model-performance` still filters `id <= 31` and
+  the leaderboard denominators stay at 31. The model had France at 59% and got it wrong.
 
 ## Architecture notes
 
@@ -53,7 +56,9 @@ cd frontend && npm run dev -- --port 5200
 - All WC matches use `neutral=True`
 - Submitted bracket username stored in `localStorage` key `wc2026_bracket_submission`
 - CORS uses regex pattern match for all `*.vercel.app` preview URLs (DynamicCORSMiddleware in main.py)
-- 31 WC knockout matches seeded in DB on first startup (`_seed_matches()` in main.py), IDs 1–31
+- 31 WC knockout matches seeded in DB on first startup (`_seed_matches()` in main.py), IDs 1–31,
+  plus slot 32 (third-place playoff) topped up idempotently by `_ensure_third_place()` — that one
+  runs on every boot because `_seed_matches()` only fires on an empty table.
   - R32 slots 1–16 are updated with real fixtures by `scripts/seed_wc2026.py`
 - `sync_matches()` decides "already recorded" on `status == "final"`, NOT `is_locked` — a live 0–0
   that ends 0–0 on penalties is still an unrecorded result, and a provider flipping
@@ -142,8 +147,9 @@ are still there but the sync supersedes them.
 
 ## Known leftovers
 
-- `backend/main.py` still uses the deprecated `@app.on_event("startup")` (works; lifespan migration
-  is the tidy-up if it ever breaks).
-- `pytest` writes fixture rows into a local `dev.db` (older tests don't roll back); `tests/test_sync.py`
-  does roll back. Filter `id<=31` when migrating data out of dev.db.
 - Full `pytest` run takes ~5 min — the model-pipeline tests train real XGBoost models.
+- `dev.db` is a local mirror and its `external_id`s were never aligned with its team names (the
+  mirror script copied teams from `/matches`, which doesn't expose `external_id`). Running a full
+  `run_sync()` against it therefore re-homes teams onto their true `external_id` rows and scrambles
+  the local bracket. Prod is unaffected — it wrote teams and `external_id` together. Don't
+  `run_sync()` against a mirrored dev.db; re-copy it instead.

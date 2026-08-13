@@ -191,6 +191,9 @@ export default function BracketChallenge() {
   const [loadingProbs, setLoadingProbs] = useState({});
 
   const [perf, setPerf] = useState(null);
+  // Slot 32 — the third-place playoff. Outside the bracket tree (nobody predicted it),
+  // so it's rendered on its own rather than through DB_ID_TO_SLOT.
+  const [thirdPlace, setThirdPlace] = useState(null);
 
   const fetchProbs = useCallback(async (matchupId, team1, team2) => {
     if (!team1 || !team2) return;
@@ -233,6 +236,7 @@ export default function BracketChallenge() {
         const slot = DB_ID_TO_SLOT[m.id];
         if (slot) bySlot[slot] = m;
       });
+      setThirdPlace(data.find((m) => m.id === 32) || null);
       const invalidated = new Set();
       const toFetch = [];
 
@@ -491,6 +495,37 @@ export default function BracketChallenge() {
             )}
             {perf?.champion?.runner_up &&
               `${perf.champion.runner_up} finish as runners-up.`}
+          </Banner>
+        </div>
+      )}
+
+      {/* Third-place playoff — a real result, but outside the 31-match bracket */}
+      {thirdPlace?.status === "final" && (
+        <div className="max-w-5xl mx-auto mb-6">
+          <Banner
+            tone="slate"
+            eyebrow="Third-place playoff · 18 July 2026"
+            title={`${thirdPlace.home_team} ${thirdPlace.home_score}–${thirdPlace.away_score} ${thirdPlace.away_team}`}
+            icon="🥉"
+          >
+            {thirdPlace.prob_home != null && (
+              <>
+                The model favoured{" "}
+                {thirdPlace.prob_home >= thirdPlace.prob_away
+                  ? thirdPlace.home_team
+                  : thirdPlace.away_team}{" "}
+                at{" "}
+                <span className="font-semibold">
+                  {Math.round(
+                    Math.max(thirdPlace.prob_home, thirdPlace.prob_away) * 100,
+                  )}
+                  %
+                </span>
+                {thirdPlace.is_upset && " and got it wrong"}.{" "}
+              </>
+            )}
+            Nobody predicted this one, so it sits outside the 31-match scorecard
+            below.
           </Banner>
         </div>
       )}

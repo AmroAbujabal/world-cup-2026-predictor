@@ -170,11 +170,12 @@ def bracket_predictions():
 
 
 STAGE_ID_RANGES = {
-    "R32":   range(1, 17),
-    "R16":   range(17, 25),
-    "QF":    range(25, 29),
-    "SF":    range(29, 31),
-    "Final": range(31, 32),
+    "R32":       range(1, 17),
+    "R16":       range(17, 25),
+    "QF":        range(25, 29),
+    "SF":        range(29, 31),
+    "Final":     range(31, 32),
+    "3rd Place": range(32, 33),
 }
 
 
@@ -183,7 +184,8 @@ def _stage_label(match_id: int) -> str:
     if match_id <= 24: return "R16"
     if match_id <= 28: return "QF"
     if match_id <= 30: return "SF"
-    return "Final"
+    if match_id == 31: return "Final"
+    return "3rd Place"
 
 
 def _to_match_response(m: Match) -> MatchResponse:

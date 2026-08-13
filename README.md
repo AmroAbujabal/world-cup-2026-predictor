@@ -11,7 +11,8 @@ the finished bracket and the model's scorecard on the record.
 ## Final state
 
 - **Champions: Spain**, beating Argentina 1–0 in the final on 19 July 2026.
-- All 31 knockout matches are recorded (R32 → Final), including three penalty shootouts.
+- All 31 knockout matches are recorded (R32 → Final), including three penalty shootouts, plus the
+  third-place playoff (France 4–6 England) as slot 32, outside the bracket.
 - The model's calls are frozen at the probabilities it held _before the result was recorded_ — see
   `GET /model-performance` for the scorecard, or the "AI report card" on the bracket page.
 - Auto-sync is idle: the tournament is over, so the GitHub Actions cron is off and only runs
@@ -124,8 +125,8 @@ VITE_API_URL=http://localhost:8000
 | `POST` | `/predict`                     | Predict a single match outcome                                    |
 | `POST` | `/group-standings`             | Simulate round-robin standings for 4 teams                        |
 | `GET`  | `/bracket-predictions`         | Full AI-simulated knockout bracket                                |
-| `GET`  | `/matches`                     | All 31 knockout fixtures with status, scores and probabilities    |
-| `GET`  | `/matches/round?round=R16`     | Fixtures for one stage (R32\|R16\|QF\|SF\|Final)                  |
+| `GET`  | `/matches`                     | All 32 knockout fixtures with status, scores and probabilities    |
+| `GET`  | `/matches/round?round=R16`     | Fixtures for one stage (R32\|R16\|QF\|SF\|Final\|3rd Place)       |
 | `GET`  | `/model-performance`           | Model vs actual results: accuracy, Brier score, per-round, misses |
 | `POST` | `/user/predict`                | Submit or update a user bracket prediction (upsert)               |
 | `GET`  | `/user/{username}/predictions` | A user's picks vs the actual results                              |
@@ -226,5 +227,6 @@ vercel --prod
 - **Penalty policy:** shootout ties are stored at their level score (e.g. 1–1), so they score as a
   draw for predictions; `penalty_home/away` only decide who advances and drive the "(x–y pens)" display.
 - `/user/predict` is an upsert — re-submitting updates the prediction rather than erroring.
-- Match IDs 1–16 are R32, 17–24 R16, 25–28 QF, 29–30 SF, 31 Final.
-- The third-place playoff is not modelled — the DB holds the 31 bracket slots only.
+- Match IDs 1–16 are R32, 17–24 R16, 25–28 QF, 29–30 SF, 31 Final, 32 third-place playoff.
+- The third-place playoff sits outside the bracket challenge — nobody predicted it, so
+  `/model-performance` and the leaderboard stay scoped to slots 1–31.

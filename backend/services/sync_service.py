@@ -20,6 +20,7 @@ STAGE_SLOTS = {
     "QUARTER_FINALS": range(25, 29),
     "SEMI_FINALS": range(29, 31),
     "FINAL": range(31, 32),
+    "THIRD_PLACE": range(32, 33),
 }
 
 

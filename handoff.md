@@ -56,6 +56,14 @@ Commits: `1007ca5` (the three backend/test items), `095c058` (bracket layout), p
    so all columns share R32's height, each card in a `flex-1` wrapper centring it in its share.
    Verified live — QF 1830 = midpoint of R16's 1671/1989; SF 2148 = midpoint of QF's 1830/2466;
    Final 2784 = midpoint of SF's 2148/3421; Champion matches the Final. Net −13 lines.
+5. **Bracket connector lines** (`347bbaa`). SVG paths built from the cards' actual
+   `getBoundingClientRect` — measured, not computed, for the same reason as #4 — with a
+   `ResizeObserver` on the grid to re-measure on reflow. Per parent: one spine out of the top child,
+   down past the parent and into the bottom child, plus a stub into the parent's left edge; the Final
+   also links to the Champion. 31 paths. Column gutter widened 24px → 40px so they have room to read
+   (bracket is 1288px, still centred at desktop width, still scrolls from the left when narrower).
+   Verified live at 900px and 1600px: SVG width matches the grid exactly and endpoints land on the
+   card edges (first path starts at x=192, the card's right edge).
 
 ## Failed Attempts / Gotchas
 
@@ -75,7 +83,10 @@ Commits: `1007ca5` (the three backend/test items), `095c058` (bracket layout), p
 
 ## Next steps
 
-Nothing outstanding — all four queued items and the layout fix are shipped and verified.
+**Nothing outstanding.** All four queued items, the layout fix and the connector lines are shipped
+and verified in production.
 
-Optional, if the bracket page gets more attention: it still has no connector lines between rounds.
-The geometry is now correct so drawing them is tractable, but it's cosmetic and nobody asked.
+If the bracket page is touched again, the one rule to keep: **never reintroduce a card-height
+constant.** Both the round spacing and the connectors are measured or height-agnostic on purpose —
+cards grow with penalty footnotes and UPSET badges, and the original `CELL = 82` guess is what broke
+the layout.

@@ -1,5 +1,11 @@
 // frontend/src/pages/BracketChallenge.jsx
-import { useEffect, useState, useCallback } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { Link } from "react-router-dom";
 import MatchupCard from "../components/MatchupCard";
 import Banner from "../components/Banner";
@@ -411,6 +417,60 @@ export default function BracketChallenge() {
   const complete = !!realChampion;
   const champion = complete ? realChampion : picks[finalMatch?.id];
 
+  // Bracket connector lines. Measured from the rendered cards rather than computed
+  // from a card-height constant — card heights vary (penalty footnotes, UPSET badges)
+  // and a guessed constant is exactly what broke the round spacing before.
+  const gridRef = useRef(null);
+  const [links, setLinks] = useState({ paths: [], w: 0, h: 0 });
+
+  useLayoutEffect(() => {
+    const root = gridRef.current;
+    if (!root) return;
+
+    const measure = () => {
+      const base = root.getBoundingClientRect();
+      // y must come from the card, not its wrapper: the wrapper is the full row
+      // share and the card is centred inside it.
+      const at = (slot) => {
+        const card = root.querySelector(
+          `[data-slot="${slot}"]`,
+        )?.firstElementChild;
+        if (!card) return null;
+        const r = card.getBoundingClientRect();
+        return {
+          left: r.left - base.left,
+          right: r.right - base.left,
+          y: r.top - base.top + r.height / 2,
+        };
+      };
+
+      const paths = [];
+      for (let rd = 0; rd < bracket.length - 1; rd++) {
+        for (let j = 0; j < bracket[rd + 1].length; j++) {
+          const a = at(`${rd}-${2 * j}`);
+          const b = at(`${rd}-${2 * j + 1}`);
+          const p = at(`${rd + 1}-${j}`);
+          if (!a || !b || !p) continue;
+          const mx = (a.right + p.left) / 2;
+          // spine: out of the top card, down past the parent, into the bottom card
+          paths.push(`M${a.right},${a.y} H${mx} V${b.y} H${b.right}`);
+          // stub: spine into the parent card
+          paths.push(`M${mx},${p.y} H${p.left}`);
+        }
+      }
+      const fin = at(`${bracket.length - 1}-0`);
+      const cham = at("champ");
+      if (fin && cham) paths.push(`M${fin.right},${fin.y} H${cham.left}`);
+
+      setLinks({ paths, w: root.offsetWidth, h: root.offsetHeight });
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(root);
+    return () => ro.disconnect();
+  }, [bracket, champion]);
+
   return (
     <div className="max-w-none">
       {/* Hero */}
@@ -668,9 +728,30 @@ export default function BracketChallenge() {
 
       {/* Bracket — horizontally scrollable */}
       <div className="overflow-x-auto pb-8">
-        <div className="flex gap-6 w-max mx-auto px-4 items-stretch">
+        <div
+          ref={gridRef}
+          className="relative flex gap-10 w-max mx-auto px-4 items-stretch"
+        >
+          {/* Connector lines, drawn under the cards */}
+          <svg
+            className="absolute left-0 top-0 pointer-events-none text-slate-300"
+            width={links.w}
+            height={links.h}
+            aria-hidden="true"
+          >
+            {links.paths.map((d, i) => (
+              <path
+                key={i}
+                d={d}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
+            ))}
+          </svg>
+
           {bracket.map((round, roundIdx) => (
-            <div key={roundIdx} className="flex flex-col">
+            <div key={roundIdx} className="relative flex flex-col">
               {/* Round label */}
               <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center w-44">
                 {ROUNDS[roundIdx]}
@@ -682,8 +763,12 @@ export default function BracketChallenge() {
                   height. Don't reintroduce a fixed card-height constant here: the
                   cards grow with penalty footnotes and UPSET badges. */}
               <div className="flex-1 flex flex-col gap-1.5">
-                {round.map((matchup) => (
-                  <div key={matchup.id} className="flex-1 flex items-center">
+                {round.map((matchup, i) => (
+                  <div
+                    key={matchup.id}
+                    data-slot={`${roundIdx}-${i}`}
+                    className="flex-1 flex items-center"
+                  >
                     <MatchupCard
                       matchup={matchup}
                       onPick={handlePick}
@@ -697,11 +782,11 @@ export default function BracketChallenge() {
           ))}
 
           {/* Champion slot */}
-          <div className="flex flex-col">
+          <div className="relative flex flex-col">
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 text-center w-44">
               Champion
             </div>
-            <div className="flex-1 flex items-center">
+            <div data-slot="champ" className="flex-1 flex items-center">
               <div
                 className={`w-44 rounded-xl border-2 p-5 text-center transition-all ${
                   champion

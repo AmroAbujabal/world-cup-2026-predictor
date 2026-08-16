@@ -1,0 +1,26 @@
+name: keep-alive
+
+# Render's free tier spins the backend down after ~15 min idle, and the first request
+# back costs 30-50s — long enough that the live demo looks broken. This pings /health
+# often enough that it never naps.
+#
+# Two things to know:
+#   - GitHub disables scheduled workflows after 60 days with no repo activity. If the
+#     demo ever goes cold again, check the Actions tab first — re-enable it there.
+#   - Render's free plan gives 750 instance-hours/month and staying awake costs ~730,
+#     so this account has room for exactly one always-on free service.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          # If it did nap, the wake-up itself takes ~50s — wait it out rather than fail.
+          curl -fsS "$BACKEND_URL/health" --max-time 90 --retry 2 --retry-delay 15

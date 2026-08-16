@@ -136,7 +136,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="World Cup Predictor API", version="1.0.0", lifespan=lifespan)
 
 ALLOWED_ORIGINS = re.compile(
-    r"^(http://localhost:\d+|https://[\w-]+-amrabujabal35-2594s-projects\.vercel\.app|https://frontend-nine-alpha-56\.vercel\.app)$"
+    r"^(http://localhost:\d+|https://[\w-]+-amrabujabal35-2594s-projects\.vercel\.app|https://frontend-nine-alpha-56\.vercel\.app|https://worldcup\.amrabujabal\.com)$"
 )
 
 

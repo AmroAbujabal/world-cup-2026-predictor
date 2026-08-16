@@ -19,11 +19,16 @@ cd frontend && npm run dev -- --port 5200
 
 ## Deployment (free stack — migrated off Railway when its trial expired, Jul 2026)
 
-- **Frontend:** Vercel — https://frontend-nine-alpha-56.vercel.app (`cd frontend && vercel --prod`).
+- **Frontend:** Vercel — **https://worldcup.amrabujabal.com** (also still on
+  https://frontend-nine-alpha-56.vercel.app). `cd frontend && vercel --prod`.
   `VITE_API_URL` (prod env) points at the Render backend; Vite bakes it at build → redeploy after changing.
+  Adding a domain is only half the job: the origin must go into `ALLOWED_ORIGINS` in main.py too, or
+  the page renders and every fetch is blocked (the bracket then silently shows its seed fixtures).
 - **Backend:** Render free web service — https://wc2026-predictor-api-5qvg.onrender.com
   (Blueprint `render.yaml`; auto-deploys on push to main). Free tier sleeps after ~15 min idle (cold start
-  ~40–60s + model retrain). Env: `DATABASE_URL` (Neon), `FOOTBALL_DATA_API_KEY`, `ADMIN_TOKEN`.
+  ~40–60s + model retrain), so `.github/workflows/keepalive.yml` pings `/health` every 10 min to hold it
+  awake — that costs ~730 of the 750 free instance-hours/month, so no second free service fits.
+  Env: `DATABASE_URL` (Neon), `FOOTBALL_DATA_API_KEY`, `ADMIN_TOKEN`.
 - **Database:** Neon free Postgres (persistent). App normalizes `postgres://`→`postgresql://` and strips
   whitespace from `DATABASE_URL` (a trailing space breaks psycopg2 sslmode).
 - **Auto-updates:** `.github/workflows/sync.yml` → `POST /admin/sync` (X-Admin-Token = GitHub secret
@@ -55,7 +60,8 @@ cd frontend && npm run dev -- --port 5200
 - Model trains once on first API request (~30s), cached via `lru_cache(maxsize=1)` in `backend/routes/predictions.py`
 - All WC matches use `neutral=True`
 - Submitted bracket username stored in `localStorage` key `wc2026_bracket_submission`
-- CORS uses regex pattern match for all `*.vercel.app` preview URLs (DynamicCORSMiddleware in main.py)
+- CORS uses regex pattern match for all `*.vercel.app` preview URLs plus the custom domain
+  (DynamicCORSMiddleware in main.py); `tests/test_cors.py` pins what's in and what stays out
 - 31 WC knockout matches seeded in DB on first startup (`_seed_matches()` in main.py), IDs 1–31,
   plus slot 32 (third-place playoff) topped up idempotently by `_ensure_third_place()` — that one
   runs on every boot because `_seed_matches()` only fires on an empty table.

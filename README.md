@@ -4,7 +4,25 @@ A full-stack machine learning app that tracked the 2026 FIFA World Cup knockout 
 Round of 32 to the trophy. An XGBoost classifier priced every tie as soon as it was set; the app recorded each result as it landed, scored user brackets against it, and now keeps
 the finished bracket and the model's scorecard on the record.
 
-**Live app:** https://frontend-nine-alpha-56.vercel.app
+**Live app:** https://worldcup.amrabujabal.com
+
+---
+
+## Screenshots
+
+**The finished bracket** — every knockout tie with its final score, the model's stored pre-kickoff
+W/D/L bar, upset flags and penalty footnotes.
+
+![Knockout bracket](docs/screenshots/bracket.png)
+
+**The AI report card** — the model scored against reality: 26/31, Brier 0.3665, broken down by round
+with every miss named.
+
+![AI report card](docs/screenshots/report-card.png)
+
+**Analysis** — the research write-up: data pipeline, features, and the leakage-free 2018/2022 backtest.
+
+![Analysis page](docs/screenshots/analysis.png)
 
 ---
 
@@ -206,8 +224,13 @@ world-cup-predictor/
 ### Backend — Render (free tier)
 
 Blueprint-deployed from `render.yaml`; pushes to `main` auto-deploy. Set `DATABASE_URL` (Neon),
-`FOOTBALL_DATA_API_KEY` and `ADMIN_TOKEN` in the Render environment. The free instance sleeps
-after ~15 min idle, so the first request after a nap takes ~40–60s (cold start + model train).
+`FOOTBALL_DATA_API_KEY` and `ADMIN_TOKEN` in the Render environment.
+
+The free instance sleeps after ~15 min idle and takes ~40–60s to come back, so
+`.github/workflows/keepalive.yml` pings `/health` every 10 minutes and it never naps. Two things
+that can undo that: GitHub disables scheduled workflows after 60 days of repo inactivity (re-enable
+in the Actions tab), and staying awake costs ~730 of Render's 750 free instance-hours a month, so
+this account has room for exactly one always-on free service.
 
 ### Frontend — Vercel
 
@@ -217,6 +240,11 @@ vercel --prod
 ```
 
 `VITE_API_URL` is baked in at build time, so redeploy the frontend after changing it.
+
+The production domain is **worldcup.amrabujabal.com** (Vercel-managed DNS on the apex, so the
+subdomain needed no new record). Any new origin must also be added to `ALLOWED_ORIGINS` in
+`backend/main.py` — otherwise pages render but every fetch is blocked and the bracket quietly falls
+back to its seed fixtures. `tests/test_cors.py` pins the allowlist.
 
 ---
 
